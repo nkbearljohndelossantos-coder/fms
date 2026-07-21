@@ -51,11 +51,11 @@ const config = {
   production: {
     client: process.env.DB_CLIENT || 'mysql2',
     connection: {
-      host: process.env.DB_HOST || '127.0.0.1',
+      host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT || 3306),
-      user: process.env.DB_USER || 'nkb_user',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'nkb_formulation_db',
+      user: process.env.DB_USER || 'u335953510_fms',
+      password: process.env.DB_PASSWORD || 'NkbManufacturing2026',
+      database: process.env.DB_NAME || 'u335953510_fms_db',
     },
     migrations: {
       directory: path.join(__dirname, '../database/migrations'),
