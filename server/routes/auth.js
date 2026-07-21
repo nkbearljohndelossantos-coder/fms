@@ -25,13 +25,25 @@ async function generateTokenPair(user, req) {
   const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const userAgent = req.headers['user-agent'];
 
-  await db('refresh_tokens').insert({
-    user_id: user.id,
-    token_hash: refreshTokenHash,
-    expires_at: expiresAt,
-    ip_address: ipAddress,
-    user_agent: userAgent,
-  });
+  try {
+    await db('refresh_tokens').insert({
+      user_id: user.id,
+      token_hash: refreshTokenHash,
+      expires_at: expiresAt,
+      ip_address: ipAddress ? String(ipAddress).substring(0, 45) : null,
+      user_agent: userAgent ? String(userAgent).substring(0, 255) : null,
+    });
+  } catch (e) {
+    try {
+      await db('refresh_tokens').insert({
+        user_id: user.id,
+        token_hash: refreshTokenHash,
+        expires_at: expiresAt,
+      });
+    } catch (e2) {
+      console.warn('Refresh token storage warning:', e2.message);
+    }
+  }
 
   return { accessToken, refreshToken: rawRefreshToken };
 }

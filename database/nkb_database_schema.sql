@@ -77,6 +77,10 @@ CREATE TABLE IF NOT EXISTS `refresh_tokens` (
   `token_hash` VARCHAR(255) NOT NULL,
   `expires_at` DATETIME NOT NULL,
   `revoked` TINYINT(1) DEFAULT 0,
+  `revoked_at` DATETIME NULL,
+  `replaced_by_token_id` INT NULL,
+  `ip_address` VARCHAR(45) NULL,
+  `user_agent` VARCHAR(255) NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
