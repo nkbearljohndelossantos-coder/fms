@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FlaskConical, Lock, User, Sparkles } from 'lucide-react';
+import { Lock, User, Sparkles } from 'lucide-react';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -35,48 +35,51 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
-        {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-brand-600 to-sky-400 flex items-center justify-center text-white shadow-xl shadow-brand-500/30">
-            <FlaskConical className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">NKB Formulation System</h1>
-          <p className="text-xs text-slate-400">Cosmetics • Perfumes • Food Supplements</p>
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
+        {/* Official NKB Golden Logo Header */}
+        <div className="text-center space-y-3">
+          <img
+            src="/nkb-logo.png"
+            alt="NKB Manufacturing Corp. Logo"
+            className="w-44 h-auto mx-auto object-contain drop-shadow-sm"
+          />
+          <p className="text-xs text-slate-500 font-medium">
+            Cosmetics • Perfumes • Food Supplements
+          </p>
         </div>
 
         {error && (
-          <div className="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-medium text-center">
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold text-center">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">Username or Email</label>
+            <label className="block text-slate-700 font-semibold mb-1.5">Username or Email</label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="text"
                 required
                 value={usernameOrEmail}
                 onChange={e => setUsernameOrEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-semibold mb-1.5">Password</label>
+            <label className="block text-slate-700 font-semibold mb-1.5">Password</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
               />
             </div>
           </div>
@@ -84,18 +87,18 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl shadow-lg shadow-brand-600/30 transition-all text-xs"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition-all text-xs"
           >
             {loading ? 'Authenticating...' : 'Sign In to Formulation Hub'}
           </button>
         </form>
 
-        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-          <p className="font-semibold text-slate-300 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Default Super Admin Credentials:
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] text-slate-600 space-y-1.5">
+          <p className="font-semibold text-slate-800 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Default Super Admin Credentials:
           </p>
-          <p className="font-mono text-slate-300">Email: admin@nkb.com</p>
-          <p className="font-mono text-slate-300">Password: Admin@123456</p>
+          <p className="font-mono text-slate-700">Email: <span className="font-bold text-slate-900">admin@nkb.com</span></p>
+          <p className="font-mono text-slate-700">Password: <span className="font-bold text-slate-900">Admin@123456</span></p>
         </div>
       </div>
     </div>
