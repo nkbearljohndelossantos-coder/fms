@@ -24,12 +24,8 @@ export function Sidebar({ currentPage, setCurrentPage }) {
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen select-none shrink-0 text-slate-300">
       {/* Brand Header */}
-      <div className="p-3.5 border-b border-slate-800 flex items-center gap-3">
-        <img src="/nkb-logo.png" alt="NKB Logo" className="w-10 h-10 object-contain drop-shadow-sm shrink-0" />
-        <div className="min-w-0">
-          <h1 className="font-extrabold text-white text-xs tracking-tight leading-tight uppercase truncate">NKB MANUFACTURING CORP.</h1>
-          <p className="text-[10px] text-amber-400 font-bold tracking-wider uppercase mt-0.5 truncate">Formulation Manager System</p>
-        </div>
+      <div className="p-4 border-b border-slate-800 flex items-center justify-center">
+        <img src="/nkb-logo.png" alt="NKB Logo" className="w-full h-20 object-contain drop-shadow-md" />
       </div>
 
       {/* Navigation Items */}
