@@ -13,7 +13,7 @@ const config = {
   development: process.env.DB_CLIENT === 'mysql2' ? {
     client: 'mysql2',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
+      host: process.env.DB_HOST || '127.0.0.1',
       port: Number(process.env.DB_PORT || 3306),
       user: process.env.DB_USER || 'u335953510_fms',
       password: process.env.DB_PASSWORD || 'NkbManufacturing2026',
@@ -66,7 +66,7 @@ const config = {
   production: {
     client: process.env.DB_CLIENT || 'mysql2',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
+      host: process.env.DB_HOST || '127.0.0.1',
       port: Number(process.env.DB_PORT || 3306),
       user: process.env.DB_USER || 'u335953510_fms',
       password: process.env.DB_PASSWORD || 'NkbManufacturing2026',
