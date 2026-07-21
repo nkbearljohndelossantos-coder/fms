@@ -1,0 +1,73 @@
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+const dotenv = require('dotenv');
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const config = {
+  development: {
+    client: 'sqlite3',
+    connection: {
+      filename: path.join(__dirname, '../database/nkb_formulation.sqlite'),
+    },
+    useNullAsDefault: true,
+    migrations: {
+      directory: path.join(__dirname, '../database/migrations'),
+    },
+    seeds: {
+      directory: path.join(__dirname, '../database/seeds'),
+    },
+    pool: {
+      afterCreate: (conn, cb) => {
+        conn.run('PRAGMA foreign_keys = ON;', cb);
+      },
+    },
+  },
+
+  test: {
+    client: 'sqlite3',
+    connection: {
+      filename: ':memory:',
+    },
+    useNullAsDefault: true,
+    migrations: {
+      directory: path.join(__dirname, '../database/migrations'),
+    },
+    seeds: {
+      directory: path.join(__dirname, '../database/seeds'),
+    },
+    pool: {
+      afterCreate: (conn, cb) => {
+        conn.run('PRAGMA foreign_keys = ON;', cb);
+      },
+    },
+  },
+
+  production: {
+    client: process.env.DB_CLIENT || 'mysql2',
+    connection: {
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: Number(process.env.DB_PORT || 3306),
+      user: process.env.DB_USER || 'nkb_user',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'nkb_formulation_db',
+    },
+    migrations: {
+      directory: path.join(__dirname, '../database/migrations'),
+    },
+    seeds: {
+      directory: path.join(__dirname, '../database/seeds'),
+    },
+    pool: {
+      min: 2,
+      max: 10,
+    },
+  },
+};
+
+export default config;
