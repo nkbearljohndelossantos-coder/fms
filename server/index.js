@@ -90,8 +90,22 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
+// Auto-Run Migrations and Seeds on startup if needed
+async function initDatabase() {
+  try {
+    console.log('🔄 Checking and running database migrations...');
+    await db.migrate.latest();
+    console.log('✅ Database migrations up to date.');
+    await db.seed.run();
+    console.log('✅ Initial database seed data loaded.');
+  } catch (err) {
+    console.error('⚠️ Database initialization note:', err.message);
+  }
+}
+
+app.listen(PORT, async () => {
   console.log(`🚀 NKB Formulation Management System Backend running on port ${PORT}`);
+  await initDatabase();
 });
 
 export default app;

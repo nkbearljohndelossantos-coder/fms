@@ -3,6 +3,13 @@ const require = createRequire(import.meta.url);
 const bcrypt = require('bcryptjs');
 
 export async function seed(knex) {
+  const isMysql = knex.client.config.client.includes('mysql');
+  if (isMysql) {
+    await knex.raw('SET FOREIGN_KEY_CHECKS = 0;');
+  } else {
+    await knex.raw('PRAGMA foreign_keys = OFF;');
+  }
+
   // Clear existing records
   await knex('audit_logs').del();
   await knex('system_settings').del();
@@ -412,6 +419,12 @@ export async function seed(knex) {
     { mixture_id: mix1Id, material_id: materialMap['MAT-PEG-105'], percentage: '2.000000', actual_quantity: '1.000000', uom: 'kg' },
     { mixture_id: mix1Id, material_id: materialMap['MAT-WTR-001'], percentage: '17.000000', actual_quantity: '8.500000', uom: 'kg' },
   ]);
+
+  if (isMysql) {
+    await knex.raw('SET FOREIGN_KEY_CHECKS = 1;');
+  } else {
+    await knex.raw('PRAGMA foreign_keys = ON;');
+  }
 
   console.log('✅ Seed completed successfully!');
 }
