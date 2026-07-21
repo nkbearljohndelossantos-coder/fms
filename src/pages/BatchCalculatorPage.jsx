@@ -6,7 +6,7 @@ export function BatchCalculatorPage({ setCurrentPage }) {
   const [formulas, setFormulas] = useState([]);
   const [selectedVersionId, setSelectedVersionId] = useState('');
   const [targetBatchQty, setTargetBatchQty] = useState('500.000000');
-  const [targetUom, setTargetUom] = useState('kg');
+  const [targetUom, setTargetUom] = useState('g');
   const [processLossPct, setProcessLossPct] = useState('0.500000');
 
   const [batchResult, setBatchResult] = useState(null);
@@ -111,15 +111,7 @@ export function BatchCalculatorPage({ setCurrentPage }) {
               onChange={e => setTargetUom(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 font-bold focus:outline-none focus:border-blue-600"
             >
-              <option value="kg">kg</option>
-              <option value="g">g</option>
-              <option value="mg">mg</option>
-              <option value="L">L</option>
-              <option value="mL">mL</option>
-              <option value="pieces">pieces</option>
-              <option value="capsules">capsules</option>
-              <option value="tablets">tablets</option>
-              <option value="sachets">sachets</option>
+              <option value="g">g (Grams)</option>
             </select>
           </div>
         </div>

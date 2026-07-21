@@ -14,7 +14,7 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
     product_subcategory: 'Serum',
     brand_type: 'NKB Core',
     reference_batch_size: '100.00',
-    reference_batch_uom: 'kg',
+    reference_batch_uom: 'g',
     revision_reason: 'Initial formula creation',
   });
 
@@ -274,10 +274,7 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
               onChange={(e) => handleChange('reference_batch_uom', e.target.value)}
               className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition"
             >
-              <option value="kg">kg (Kilograms)</option>
               <option value="g">g (Grams)</option>
-              <option value="L">L (Liters)</option>
-              <option value="mL">mL (Milliliters)</option>
             </select>
           </div>
         </div>

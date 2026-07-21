@@ -8,7 +8,7 @@ export function CreateMaterialPage({ setCurrentPage }) {
     code: '',
     companyId: '',
     vendorId: '',
-    uom: 'kg',
+    uom: 'g',
     cost: '0.00',
     currencyCode: 'PHP',
     densityKgPerL: '1.00',
@@ -179,21 +179,7 @@ export function CreateMaterialPage({ setCurrentPage }) {
               onChange={e => setFormData({ ...formData, uom: e.target.value })}
               className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-600"
             >
-              <optgroup label="MASS">
-                <option value="kg">kg (Kilogram)</option>
-                <option value="g">g (Gram)</option>
-                <option value="mg">mg (Milligram)</option>
-              </optgroup>
-              <optgroup label="VOLUME">
-                <option value="L">L (Liter)</option>
-                <option value="mL">mL (Milliliter)</option>
-              </optgroup>
-              <optgroup label="COUNT">
-                <option value="pieces">pieces</option>
-                <option value="capsules">capsules</option>
-                <option value="tablets">tablets</option>
-                <option value="sachets">sachets</option>
-              </optgroup>
+              <option value="g">g (Gram)</option>
             </select>
           </div>
 
