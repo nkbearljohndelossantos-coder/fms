@@ -719,20 +719,32 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
         }).then(r => [r[0]]);
 
         const phaseIdMap = {};
-        for (const p of phases) {
+        if (phases.length === 0) {
           const [bpId] = await trx('batch_phases').insert({
             batch_id: batchId,
-            phase_letter: String.fromCharCode(64 + p.phase_order),
-            phase_name: p.phase_name,
-            sequence: p.phase_order,
+            phase_letter: 'A',
+            phase_name: 'Phase A - Production',
+            sequence: 1,
             status: 'Waiting',
           }).then(r => [r[0]]);
-          phaseIdMap[p.id] = bpId;
+          phaseIdMap['default'] = bpId;
+        } else {
+          for (const p of phases) {
+            const order = Number(p.phase_order) || 1;
+            const [bpId] = await trx('batch_phases').insert({
+              batch_id: batchId,
+              phase_letter: String.fromCharCode(64 + order),
+              phase_name: p.phase_name,
+              sequence: order,
+              status: 'Waiting',
+            }).then(r => [r[0]]);
+            phaseIdMap[p.id] = bpId;
+          }
         }
 
         for (let i = 0; i < versionInstructions.length; i++) {
           const inst = versionInstructions[i];
-          const bpId = phaseIdMap[inst.phase_id] || (Object.values(phaseIdMap)[0] || null);
+          const bpId = phaseIdMap[inst.phase_id] || Object.values(phaseIdMap)[0] || null;
 
           const [bsId] = await trx('batch_steps').insert({
             batch_id: batchId,
@@ -880,20 +892,32 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
       }).then(r => [r[0]]);
 
       const phaseIdMap = {};
-      for (const p of phases) {
+      if (phases.length === 0) {
         const [bpId] = await trx('batch_phases').insert({
           batch_id: batchId,
-          phase_letter: String.fromCharCode(64 + p.phase_order),
-          phase_name: p.phase_name,
-          sequence: p.phase_order,
+          phase_letter: 'A',
+          phase_name: 'Phase A - Production',
+          sequence: 1,
           status: 'Waiting',
         }).then(r => [r[0]]);
-        phaseIdMap[p.id] = bpId;
+        phaseIdMap['default'] = bpId;
+      } else {
+        for (const p of phases) {
+          const order = Number(p.phase_order) || 1;
+          const [bpId] = await trx('batch_phases').insert({
+            batch_id: batchId,
+            phase_letter: String.fromCharCode(64 + order),
+            phase_name: p.phase_name,
+            sequence: order,
+            status: 'Waiting',
+          }).then(r => [r[0]]);
+          phaseIdMap[p.id] = bpId;
+        }
       }
 
       for (let i = 0; i < instructions.length; i++) {
         const inst = instructions[i];
-        const bpId = phaseIdMap[inst.phase_id] || (Object.values(phaseIdMap)[0] || null);
+        const bpId = phaseIdMap[inst.phase_id] || Object.values(phaseIdMap)[0] || null;
 
         const [bsId] = await trx('batch_steps').insert({
           batch_id: batchId,
