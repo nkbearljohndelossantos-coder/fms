@@ -25,7 +25,6 @@ export function Sidebar({ currentPage, setCurrentPage }) {
   const [materialsOpen, setMaterialsOpen] = useState(true);
   const [formulationsOpen, setFormulationsOpen] = useState(true);
   const [productionOpen, setProductionOpen] = useState(true);
-  const [qualityOpen, setQualityOpen] = useState(true);
 
   const isCurrent = (page) => currentPage === page;
   const isOperator = user?.role === 'Compounding Operator';
@@ -103,7 +102,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
             </button>
           </>
         ) : (
-          /* ADMIN & CHEMIST FULL ENTERPRISE NAVIGATION */
+          /* ADMIN & CHEMIST NAVIGATION */
           <>
             {/* Dashboard */}
             <button
@@ -306,7 +305,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
 
       {/* Scope Footer */}
       <div className="p-3 border-t border-slate-800 bg-slate-950/60 text-xs text-slate-400 space-y-1">
-        <p className="font-semibold text-slate-300">Cosmetics • Perfumes • Supplements</p>
+        <p className="font-semibold text-slate-300">Cosmetics Formulation MES</p>
         <p className="text-[10px] leading-tight text-slate-400">
           Strictly Formulation & Compounding MES. No ERP logic.
         </p>
@@ -314,3 +313,5 @@ export function Sidebar({ currentPage, setCurrentPage }) {
     </aside>
   );
 }
+
+export default Sidebar;

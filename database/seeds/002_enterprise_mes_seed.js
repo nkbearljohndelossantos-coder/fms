@@ -120,8 +120,6 @@ export async function seed(knex) {
     { code: 'MX-01', name: 'High-Shear Vacuum Mixer 500L', type: 'Mixer', location: 'Cleanroom B1', status: 'Active' },
     { code: 'RC-02', name: 'Stainless Steel Compounding Reactor 1000L', type: 'Reactor', location: 'Main Compounding Bay', status: 'Active' },
     { code: 'HM-01', name: 'Inline Micro-Homogenizer 200L/h', type: 'Homogenizer', location: 'Emulsion Line A', status: 'Active' },
-    { code: 'MT-01', name: 'Perfume Maceration Vessel 2000L', type: 'Maceration Tank', location: 'Fragrance Vault', status: 'Active' },
-    { code: 'TP-01', name: 'Rotary Tablet Compression Press', type: 'Tablet Press', location: 'Nutraceutical Suite 2', status: 'Active' },
   ];
 
   const opUser = await knex('users').where({ email: 'operator@nkb.com' }).first();
@@ -157,7 +155,7 @@ export async function seed(knex) {
     }
   }
 
-  // 6. Category-Configurable QC Templates
+  // 6. Category-Configurable QC Templates (Cosmetics Only)
   const qcTemplates = [
     {
       code: 'QC-TMP-COSMETIC',
@@ -169,28 +167,6 @@ export async function seed(knex) {
         { param_code: 'DENSITY_GML', param_name: 'Density / Specific Gravity', unit: 'g/mL', min_value: 0.980000, max_value: 1.020000, is_required: true },
         { param_code: 'MICROBE_CFU', param_name: 'Total Aerobic Microbial Count', unit: 'CFU/g', min_value: 0.000000, max_value: 100.000000, is_required: true },
         { param_code: 'HEAVY_METALS', param_name: 'Heavy Metals Screen (Pb/As)', unit: 'PPM', min_value: 0.000000, max_value: 10.000000, is_required: true },
-      ],
-    },
-    {
-      code: 'QC-TMP-PERFUME',
-      name: 'Fine Fragrance Maceration & Clarity QC Matrix',
-      category: 'Perfumes',
-      params: [
-        { param_code: 'SPEC_GRAV', param_name: 'Specific Gravity @ 20°C', unit: 'g/mL', min_value: 0.810000, max_value: 0.850000, is_required: true },
-        { param_code: 'CLARITY_NTU', param_name: 'Optical Turbidity / Clarity', unit: 'NTU', min_value: 0.000000, max_value: 2.000000, is_required: true },
-        { param_code: 'ALC_VOL', param_name: 'Ethanol Volumetric Assay', unit: '% v/v', min_value: 78.000000, max_value: 82.000000, is_required: true },
-        { param_code: 'SCENT_EVAL', param_name: 'Organoleptic Olfactory Profile', unit: 'Pass/Fail', target_value_str: 'Standard Match', is_required: true },
-      ],
-    },
-    {
-      code: 'QC-TMP-SUPPLEMENT',
-      name: 'Nutraceutical Supplement Quality Matrix',
-      category: 'Food Supplements',
-      params: [
-        { param_code: 'ACTIVE_ASSAY', param_name: 'Active Vitamin C Assay', unit: '% label', min_value: 98.000000, max_value: 105.000000, is_required: true },
-        { param_code: 'DISINTEGRATION', param_name: 'USP Disintegration Time', unit: 'minutes', min_value: 0.000000, max_value: 15.000000, is_required: true },
-        { param_code: 'MOISTURE_PCT', param_name: 'Karl Fischer Moisture Content', unit: '%', min_value: 0.000000, max_value: 3.500000, is_required: true },
-        { param_code: 'HEAVY_METALS_NUTRA', param_name: 'ICP-MS Heavy Metals Panel', unit: 'PPM', min_value: 0.000000, max_value: 5.000000, is_required: true },
       ],
     },
   ];
@@ -227,26 +203,16 @@ export async function seed(knex) {
     }
   }
 
-  // 7. Seed Production Batches & QC Inspections
+  // 7. Seed Production Batches & QC Inspections (Cosmetics Focus Only)
   await knex('qc_inspections').del();
   await knex('batch_material_requirements').del();
   await knex('batch_steps').del();
   await knex('batch_phases').del();
   await knex('production_batches').del();
 
-  const formulas = await knex('formulas').select('*');
-  const fCosmetic = formulas.find(f => f.product_category === 'Cosmetic') || formulas[0];
-  const fPerfume = formulas.find(f => f.product_category === 'Perfume No Brand' || f.product_category === 'Perfume Brand') || formulas[1] || formulas[0];
-  const fSupplement = formulas.find(f => f.product_category === 'Food Supplement') || formulas[2] || formulas[0];
-
-  const fVersions = await knex('formula_versions').select('*');
-  const vCosmetic = fVersions.find(v => v.formula_id === fCosmetic?.id) || fVersions[0];
-  const vPerfume = fVersions.find(v => v.formula_id === fPerfume?.id) || fVersions[1] || fVersions[0];
-  const vSupplement = fVersions.find(v => v.formula_id === fSupplement?.id) || fVersions[2] || fVersions[0];
-
+  const fCosmetic = await knex('formulas').where({ product_category: 'Cosmetic' }).first();
+  const vCosmetic = fCosmetic ? await knex('formula_versions').where({ formula_id: fCosmetic.id }).first() : null;
   const mx01Machine = await knex('machines').where({ code: 'MX-01' }).first();
-  const mt01Machine = await knex('machines').where({ code: 'MT-01' }).first();
-  const tp01Machine = await knex('machines').where({ code: 'TP-01' }).first();
 
   if (fCosmetic && vCosmetic) {
     // Batch 1: Cosmetic (In Progress)
@@ -324,6 +290,15 @@ export async function seed(knex) {
       });
     }
 
+    const cosmeticTemplate = await knex('qc_templates').where({ category: 'Cosmetics' }).first();
+    if (cosmeticTemplate) {
+      await knex('qc_inspections').insert({
+        batch_id: bId1,
+        template_id: cosmeticTemplate.id,
+        status: 'Pending QC',
+      });
+    }
+
     const qrToken1 = crypto.randomBytes(32).toString('hex');
     await knex('qr_tokens').insert({
       token_hash: crypto.createHash('sha256').update(qrToken1).digest('hex'),
@@ -334,82 +309,5 @@ export async function seed(knex) {
     });
   }
 
-  if (fPerfume && vPerfume) {
-    // Batch 2: Perfume (Assigned / Ready)
-    const [bId2] = await knex('production_batches').insert({
-      batch_number: 'BAT-2026-0102',
-      formula_id: fPerfume.id,
-      formula_version_id: vPerfume.id,
-      category: 'Perfumes',
-      status: 'Assigned',
-      target_batch_size: '250.000000',
-      overall_progress_percent: '0.000000',
-      assigned_operator_id: opUser?.id || null,
-      assigned_machine_id: mt01Machine?.id || null,
-      snapshot_hash: crypto.randomBytes(32).toString('hex'),
-      created_by: adminId,
-    }).then(r => [r[0]]);
-
-    const [bpId2] = await knex('batch_phases').insert({
-      batch_id: bId2,
-      phase_letter: 'A',
-      phase_name: 'Phase A: Maceration Charge',
-      sequence: 1,
-      status: 'Waiting',
-    }).then(r => [r[0]]);
-
-    const [bsId3] = await knex('batch_steps').insert({
-      batch_id: bId2,
-      phase_id: bpId2,
-      step_number: 1,
-      instructions: 'Charge Fragrance Concentrate Oil into Maceration Tank MT-01',
-      status: 'Pending',
-      lock_version: 1,
-    }).then(r => [r[0]]);
-
-    const mats = await knex('materials').select('*');
-    const matFo = mats.find(m => m.code === 'MAT-FO-102') || mats[0];
-    if (matFo) {
-      await knex('batch_material_requirements').insert({
-        batch_id: bId2,
-        step_id: bsId3,
-        material_id: matFo.id,
-        material_code: matFo.code,
-        material_name: matFo.name,
-        percentage: '5.000000',
-        target_weight: '12.500000',
-        tolerance_percent: '1.000000',
-        min_weight: '12.375000',
-        max_weight: '12.625000',
-      });
-    }
-  }
-
-  if (fSupplement && vSupplement) {
-    // Batch 3: Food Supplement (Pending QC)
-    const [bId3] = await knex('production_batches').insert({
-      batch_number: 'BAT-2026-0103',
-      formula_id: fSupplement.id,
-      formula_version_id: vSupplement.id,
-      category: 'Food Supplements',
-      status: 'Pending QC',
-      target_batch_size: '100.000000',
-      overall_progress_percent: '100.000000',
-      assigned_operator_id: opUser?.id || null,
-      assigned_machine_id: tp01Machine?.id || null,
-      snapshot_hash: crypto.randomBytes(32).toString('hex'),
-      created_by: adminId,
-    }).then(r => [r[0]]);
-
-    const suppTemplate = await knex('qc_templates').where({ category: 'Food Supplements' }).first();
-    if (suppTemplate) {
-      await knex('qc_inspections').insert({
-        batch_id: bId3,
-        template_id: suppTemplate.id,
-        status: 'Pending QC',
-      });
-    }
-  }
-
-  console.log('✅ Enterprise MES Seed completed!');
+  console.log('✅ Enterprise MES Seed completed (Cosmetics Focus Only)!');
 }
