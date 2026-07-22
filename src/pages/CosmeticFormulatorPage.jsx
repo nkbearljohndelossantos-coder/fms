@@ -103,6 +103,7 @@ export function CosmeticFormulatorPage() {
             percentage: String(m.percentage || '0.00'),
             function_name: m.function_name || 'Active',
             phase_name: m.phase_name || 'Phase A - Water Phase',
+            cost: m.cost || '0.00',
             addition_order: idx + 1,
           }));
 
@@ -118,7 +119,7 @@ export function CosmeticFormulatorPage() {
   const isValidPct = Math.abs(parseFloat(totalPct) - 100) < 0.05;
 
   const addLine = (phaseName = 'Phase A - Water Phase') => {
-    const mat = availableMaterials[0] || { id: 1, code: 'MAT-001', name: 'Material', uom: 'g' };
+    const mat = availableMaterials[0] || { id: 1, code: 'MAT-001', name: 'Material', uom: 'g', cost: '0.00' };
     setMaterials([
       ...materials,
       {
@@ -129,6 +130,7 @@ export function CosmeticFormulatorPage() {
         percentage: '0.00',
         function_name: 'Solvent Base',
         phase_name: phaseName,
+        cost: mat.cost || '0.00',
         addition_order: materials.length + 1,
       },
     ]);
@@ -147,6 +149,7 @@ export function CosmeticFormulatorPage() {
         next[idx].material_code_snapshot = mat.code;
         next[idx].material_name_snapshot = mat.name;
         next[idx].uom_snapshot = mat.uom || 'g';
+        next[idx].cost = mat.cost || '0.00';
       }
     } else {
       next[idx][field] = val;
@@ -408,6 +411,8 @@ export function CosmeticFormulatorPage() {
                   <tr>
                     <th className="p-3">Phase</th>
                     <th className="p-3">Material</th>
+                    <th className="p-3 text-right">Unit Cost (PHP/g)</th>
+                    <th className="p-3 text-right">Line Cost (PHP)</th>
                     <th className="p-3">Percentage (%)</th>
                     <th className="p-3">Function</th>
                     <th className="p-3">UOM</th>
@@ -415,75 +420,108 @@ export function CosmeticFormulatorPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {materials.map((m, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-3">
-                        {isReadOnly ? (
-                          <span className="font-semibold text-slate-900">{m.phase_name}</span>
-                        ) : (
-                          <select
-                            value={m.phase_name || 'Phase A - Water Phase'}
-                            onChange={e => handleMaterialChange(idx, 'phase_name', e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-semibold"
-                          >
-                            <option value="Phase A - Water Phase">Phase A - Water Phase</option>
-                            <option value="Phase B - Surfactant Phase">Phase B - Surfactant Phase</option>
-                            <option value="Phase C - Active Phase">Phase C - Active Phase</option>
-                            <option value="Cooling Phase">Cooling Phase</option>
-                            <option value="Post-Addition Phase">Post-Addition Phase</option>
-                          </select>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {isReadOnly ? (
-                          <span className="font-medium text-slate-900">{m.material_code_snapshot} — {m.material_name_snapshot}</span>
-                        ) : (
-                          <select
-                            value={m.material_id}
-                            onChange={e => handleMaterialChange(idx, 'material_id', e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-medium w-64"
-                          >
-                            {availableMaterials.map(mat => (
-                              <option key={mat.id} value={mat.id}>{mat.code} — {mat.name}</option>
-                            ))}
-                          </select>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {isReadOnly ? (
-                          <span className="font-mono font-bold text-slate-900">{Number(m.percentage).toFixed(4)}%</span>
-                        ) : (
-                          <input
-                            type="number"
-                            step="0.0001"
-                            value={m.percentage}
-                            onChange={e => handleMaterialChange(idx, 'percentage', e.target.value)}
-                            className="w-28 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-mono font-bold"
-                          />
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {isReadOnly ? (
-                          <span className="text-slate-800">{m.function_name}</span>
-                        ) : (
-                          <input
-                            type="text"
-                            value={m.function_name}
-                            onChange={e => handleMaterialChange(idx, 'function_name', e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 w-40"
-                          />
-                        )}
-                      </td>
-                      <td className="p-3 font-mono text-slate-700 font-bold">{m.uom_snapshot || 'g'}</td>
-                      {!isReadOnly && (
-                        <td className="p-3 text-center">
-                          <button onClick={() => removeLine(idx)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                  {materials.map((m, idx) => {
+                    const unitCost = parseFloat(m.cost || 0);
+                    const lineCost = (parseFloat(m.percentage || 0) / 100) * parseFloat(activeVersion?.target_batch_size || 100) * unitCost;
+
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-3">
+                          {isReadOnly ? (
+                            <span className="font-semibold text-slate-900">{m.phase_name}</span>
+                          ) : (
+                            <select
+                              value={m.phase_name || 'Phase A - Water Phase'}
+                              onChange={e => handleMaterialChange(idx, 'phase_name', e.target.value)}
+                              className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-semibold"
+                            >
+                              <option value="Phase A - Water Phase">Phase A - Water Phase</option>
+                              <option value="Phase B - Surfactant Phase">Phase B - Surfactant Phase</option>
+                              <option value="Phase C - Active Phase">Phase C - Active Phase</option>
+                              <option value="Cooling Phase">Cooling Phase</option>
+                              <option value="Post-Addition Phase">Post-Addition Phase</option>
+                            </select>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td className="p-3">
+                          {isReadOnly ? (
+                            <span className="font-medium text-slate-900">{m.material_code_snapshot} — {m.material_name_snapshot}</span>
+                          ) : (
+                            <select
+                              value={m.material_id}
+                              onChange={e => handleMaterialChange(idx, 'material_id', e.target.value)}
+                              className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-medium w-64"
+                            >
+                              {availableMaterials.map(mat => (
+                                <option key={mat.id} value={mat.id}>{mat.code} — {mat.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-600 font-semibold">
+                          PHP {unitCost.toFixed(4)}
+                        </td>
+                        <td className="p-3 text-right font-mono text-blue-700 font-bold">
+                          PHP {lineCost.toFixed(2)}
+                        </td>
+                        <td className="p-3">
+                          {isReadOnly ? (
+                            <span className="font-mono font-bold text-slate-900">{Number(m.percentage).toFixed(4)}%</span>
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.0001"
+                              value={m.percentage}
+                              onChange={e => handleMaterialChange(idx, 'percentage', e.target.value)}
+                              className="w-28 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-mono font-bold"
+                            />
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {isReadOnly ? (
+                            <span className="text-slate-800">{m.function_name}</span>
+                          ) : (
+                            <input
+                              type="text"
+                              value={m.function_name}
+                              onChange={e => handleMaterialChange(idx, 'function_name', e.target.value)}
+                              className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 w-40"
+                            />
+                          )}
+                        </td>
+                        <td className="p-3 font-mono text-slate-700 font-bold">{m.uom_snapshot || 'g'}</td>
+                        {!isReadOnly && (
+                          <td className="p-3 text-center">
+                            <button onClick={() => removeLine(idx)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+
+                  {/* Summary Cost & Percentage Row */}
+                  <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-900 text-xs">
+                    <td className="p-3" colSpan="2">
+                      Total Formulation Summary
+                    </td>
+                    <td className="p-3 text-right font-mono text-slate-500">
+                      —
+                    </td>
+                    <td className="p-3 text-right font-mono text-blue-800 text-sm">
+                      PHP {materials.reduce((acc, m) => {
+                        const pct = parseFloat(m.percentage) || 0;
+                        const cost = parseFloat(m.cost) || 0;
+                        const batchSize = parseFloat(activeVersion?.target_batch_size) || 100;
+                        return acc + (pct / 100) * batchSize * cost;
+                      }, 0).toFixed(2)}
+                    </td>
+                    <td className="p-3 font-mono text-indigo-700">
+                      {totalPct}%
+                    </td>
+                    <td className="p-3" colSpan={isReadOnly ? 2 : 3}></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
