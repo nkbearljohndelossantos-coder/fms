@@ -321,10 +321,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft)
+// 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft - STRICT MYSQL COMPATIBLE)
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
-    const { name, category, formula_type, product_category, reference_batch_size, batchSize = '100.000000', batchUom = 'g', revisionReason = 'Initial creation' } = req.body;
+    const { name, category, formula_type, product_category, product_subcategory, brand_type, reference_batch_size, batchSize = '100.000000', batchUom = 'g', revisionReason = 'Initial creation' } = req.body;
 
     const formulaName = name || 'New Formula';
     const rawCategory = category || formula_type || product_category || 'Cosmetic';
@@ -337,13 +337,18 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
     const txResult = await db.transaction(async (trx) => {
       const code = await SequenceService.getNextSequence('FORMULA_CODE', trx);
 
-      const [formulaId] = await trx('formulas').insert({
+      const insertFormula = {
         code,
         name: formulaName,
         product_category: normalizedCategory,
-        is_active: true,
-        created_by: req.user.id,
-      }).then(res => [res[0]]);
+        status: 'ACTIVE',
+        owner_id: req.user?.id || null,
+      };
+
+      if (product_subcategory) insertFormula.product_subcategory = product_subcategory;
+      if (brand_type) insertFormula.brand_type = brand_type;
+
+      const [formulaId] = await trx('formulas').insert(insertFormula).then(res => [res[0]]);
 
       const insertVersion = {
         formula_id: formulaId,
@@ -356,7 +361,7 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
         target_batch_size: targetBatchSize,
         target_batch_uom: batchUom || 'g',
         expected_yield: '100.000000',
-        created_by: req.user.id,
+        created_by: req.user?.id || null,
       };
 
       const [versionId] = await trx('formula_versions').insert(insertVersion).then(res => [res[0]]);
@@ -385,8 +390,8 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
 
       await AuditService.logEvent({
         trx,
-        userId: req.user.id,
-        userRole: req.user.roles[0] || 'Chemist',
+        userId: req.user?.id || 1,
+        userRole: req.user?.roles?.[0] || 'Chemist',
         action: 'CREATE_FORMULA',
         entityType: 'Formula',
         entityId: formulaId,
@@ -410,6 +415,7 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
       versionId: txResult.versionId,
     });
   } catch (err) {
+    console.error('Create Formula Error:', err);
     return res.status(500).json({ success: false, message: 'Database operation failed', error: err.message });
   }
 });
