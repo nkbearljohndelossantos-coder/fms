@@ -14,7 +14,7 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
     product_subcategory: 'Serum',
     brand_type: 'NKB Core',
     reference_batch_size: '100.00',
-    reference_batch_uom: 'kg',
+    reference_batch_uom: 'g',
     revision_reason: 'Initial formula creation',
   });
 
@@ -64,7 +64,7 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
           product_subcategory: formData.product_subcategory,
           brand_type: formData.brand_type,
           reference_batch_size: formData.reference_batch_size,
-          reference_batch_uom: formData.reference_batch_uom,
+          reference_batch_uom: 'g',
           revision_reason: formData.revision_reason,
         }),
       });
@@ -208,10 +208,10 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
               />
             </div>
 
-            {/* Target Batch Size */}
+            {/* Target Batch Size (LOCKED TO GRAMS) */}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Default Target Batch Size
+                Default Target Batch Size (Grams)
               </label>
               <div className="flex gap-2">
                 <input
@@ -223,16 +223,9 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
                   onChange={(e) => handleChange('reference_batch_size', e.target.value)}
                   className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
                 />
-                <select
-                  value={formData.reference_batch_uom}
-                  onChange={(e) => handleChange('reference_batch_uom', e.target.value)}
-                  className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-mono"
-                >
-                  <option value="kg">kg</option>
-                  <option value="g">g</option>
-                  <option value="L">L</option>
-                  <option value="mL">mL</option>
-                </select>
+                <div className="w-16 bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-700 flex items-center justify-center shrink-0">
+                  g
+                </div>
               </div>
             </div>
 
