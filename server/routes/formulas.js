@@ -188,7 +188,11 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
       });
 
       const uniquePhaseNames = [...new Set((materials || []).map(m => m.phase_name).filter(Boolean))];
-      let order = existingPhases.length ? Math.max(...existingPhases.map(p => p.phase_order)) + 1 : 1;
+      let order = 1;
+      if (existingPhases.length > 0) {
+        const orders = existingPhases.map(p => Number(p.phase_order) || 0);
+        order = Math.max(...orders, 0) + 1;
+      }
 
       for (const pName of uniquePhaseNames) {
         if (!phaseMap[pName]) {
@@ -224,6 +228,14 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
           const reqWeight = pctDec.div(100).times(batchSizeDec);
           const lineCost = reqWeight.times(costPerG);
 
+          const parseNum = (val) => {
+            if (val === undefined || val === null) return null;
+            const cleanStr = String(val).trim();
+            if (cleanStr === '') return null;
+            const parsed = Number(cleanStr);
+            return isNaN(parsed) ? null : parsed;
+          };
+
           return {
             version_id: versionId,
             phase_id: pId,
@@ -235,9 +247,9 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
             calculated_quantity: reqWeight.toFixed(6),
             addition_order: m.addition_order || (idx + 1),
             function_name: m.function_name || null,
-            temp_c: m.temp_c || null,
-            mixing_speed_rpm: m.mixing_speed_rpm || null,
-            duration_min: m.duration_min || null,
+            temp_c: parseNum(m.temp_c),
+            mixing_speed_rpm: parseNum(m.mixing_speed_rpm),
+            duration_min: parseNum(m.duration_min),
             line_cost: lineCost.toFixed(6),
           };
         });
@@ -286,6 +298,13 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
 
     return res.json({ success: true, message: 'Formula draft version updated successfully' });
   } catch (err) {
+    console.error('Error updating formula version:', err);
+    if (err.code === 'ER_DUP_ENTRY' || err.message?.includes('unique') || err.message?.includes('Duplicate')) {
+      return res.status(422).json({
+        success: false,
+        message: 'Duplicate raw material detected in the same phase. Please combine duplicate material lines inside the same phase before saving.'
+      });
+    }
     return res.status(500).json({ success: false, message: 'Database operation failed', error: err.message });
   }
 });
