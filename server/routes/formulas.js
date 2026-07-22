@@ -202,7 +202,7 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
       }
 
       // 2. Fetch unit costs for materials to compute line costs
-      const materialIds = (materials || []).map(m => m.material_id);
+      const materialIds = (materials || []).map(m => m.material_id || m.id).filter(Boolean);
       const rawMaterials = await trx('materials').whereIn('id', materialIds);
       const materialCostMap = {};
       rawMaterials.forEach(m => {
@@ -219,17 +219,18 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
         const insertMats = materials.map((m, idx) => {
           const pId = phaseMap[m.phase_name] || null;
           const pctDec = new Decimal(m.percentage || '0');
-          const costPerG = materialCostMap[m.material_id] || new Decimal(0);
+          const mId = m.material_id || m.id;
+          const costPerG = materialCostMap[mId] || new Decimal(0);
           const reqWeight = pctDec.div(100).times(batchSizeDec);
           const lineCost = reqWeight.times(costPerG);
 
           return {
             version_id: versionId,
             phase_id: pId,
-            material_id: m.material_id,
-            material_code_snapshot: m.material_code_snapshot,
-            material_name_snapshot: m.material_name_snapshot,
-            uom_snapshot: m.uom_snapshot || 'g',
+            material_id: mId,
+            material_code_snapshot: m.material_code_snapshot || m.material_code || m.code || 'MAT',
+            material_name_snapshot: m.material_name_snapshot || m.material_name || m.name || 'Material',
+            uom_snapshot: m.uom_snapshot || m.uom || 'g',
             percentage: pctDec.toFixed(6),
             calculated_quantity: reqWeight.toFixed(6),
             addition_order: m.addition_order || (idx + 1),
