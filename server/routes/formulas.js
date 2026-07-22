@@ -38,7 +38,7 @@ function calculateFormulaCosting(materials, targetBatchSize = '100.000000') {
   };
 }
 
-async function saveFormulaCostSnapshot(trx, versionId, costingResult) {
+async function saveFormulaCostSnapshot(trx, versionId, costingResult, materials) {
   const [snapshotId] = await trx('formula_cost_snapshots').insert({
     version_id: versionId,
     raw_material_cost: costingResult.totalBatchCost || '0.000000',
@@ -51,19 +51,33 @@ async function saveFormulaCostSnapshot(trx, versionId, costingResult) {
     currency_code: 'PHP',
   }).then(res => [res[0]]);
 
+  const materialMap = {};
+  if (Array.isArray(materials)) {
+    materials.forEach(m => {
+      materialMap[m.material_id] = {
+        code: m.material_code_snapshot || m.material_code || m.code || 'MAT',
+        name: m.material_name_snapshot || m.material_name || m.name || 'Material',
+        uom: m.uom_snapshot || m.uom || 'g',
+      };
+    });
+  }
+
   if (Array.isArray(costingResult.lineCosts) && costingResult.lineCosts.length > 0) {
-    const insertItems = costingResult.lineCosts.map(item => ({
-      snapshot_id: snapshotId,
-      material_id: item.material_id,
-      material_code_snapshot: item.material_code || 'MAT',
-      material_name_snapshot: item.material_name || 'Material',
-      percentage: item.percentage || '0.000000',
-      quantity: item.required_weight || '0.000000',
-      uom: 'g',
-      cost_per_uom: item.cost_per_kg || '0.000000',
-      line_cost: item.line_cost || '0.000000',
-      currency_code: 'PHP',
-    }));
+    const insertItems = costingResult.lineCosts.map(item => {
+      const meta = materialMap[item.materialId] || {};
+      return {
+        snapshot_id: snapshotId,
+        material_id: item.materialId,
+        material_code_snapshot: meta.code || 'MAT',
+        material_name_snapshot: meta.name || 'Material',
+        percentage: item.percentage || '0.000000',
+        quantity: item.requiredWeight || '0.000000',
+        uom: meta.uom || 'g',
+        cost_per_uom: item.costPerKg || '0.000000',
+        line_cost: item.lineCost || '0.000000',
+        currency_code: 'PHP',
+      };
+    });
     await trx('formula_cost_snapshot_items').insert(insertItems);
   }
 }
@@ -675,7 +689,7 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
           .update({ version_status: 'SUPERSEDED', updated_at: trx.fn.now() });
 
         const costingResult = calculateFormulaCosting(materials, version.target_batch_size);
-        await saveFormulaCostSnapshot(trx, versionId, costingResult);
+        await saveFormulaCostSnapshot(trx, versionId, costingResult, materials);
 
         // AUTOMATICALLY CREATE PRODUCTION BATCH ON APPROVAL
         const batchNumber = await SequenceService.getNextSequence('BATCH_NUMBER', trx);
