@@ -12,22 +12,18 @@ import { apiFetch } from '../services/api';
 
 export function DashboardPage({ setCurrentPage }) {
   const [stats, setStats] = useState({
-    total: 3,
-    cosmetic: 1,
-    perfumeNoBrand: 1,
-    perfumeBrand: 0,
-    supplement: 1,
+    total: 2,
+    cosmetic: 2,
     drafts: 0,
     underReview: 0,
     forApproval: 0,
-    approved: 3,
+    approved: 2,
     rejected: 0,
   });
 
   const [recentFormulas, setRecentFormulas] = useState([
     { id: 1, code: 'F-COS-001', name: 'Gentle Hydrating Facial Cleanser', category: 'Cosmetic', version: '1.0', status: 'APPROVED', updated_at: '2026-07-21' },
-    { id: 2, code: 'F-PRF-001', name: 'Vanilla Blossom Body Mist (No Brand Base)', category: 'Perfume No Brand', version: '1.0', status: 'APPROVED', updated_at: '2026-07-21' },
-    { id: 3, code: 'F-SUP-001', name: 'Immune Shield Vit C + Zinc Capsule 500mg', category: 'Food Supplement', version: '1.0', status: 'APPROVED', updated_at: '2026-07-21' },
+    { id: 2, code: 'F-COS-002', name: 'Niacinamide 10% Soothing Serum', category: 'Cosmetic', version: '1.0', status: 'APPROVED', updated_at: '2026-07-21' },
   ]);
 
   useEffect(() => {
@@ -35,16 +31,12 @@ export function DashboardPage({ setCurrentPage }) {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
-          const list = data.data;
-          let cosmetic = 0, perfumeNoBrand = 0, perfumeBrand = 0, supplement = 0;
+          const list = data.data.filter(f => f.product_category === 'Cosmetic' || f.category === 'Cosmetic');
+          let cosmetic = 0;
           let drafts = 0, underReview = 0, forApproval = 0, approved = 0, rejected = 0;
 
           list.forEach(f => {
-            if (f.product_category === 'Cosmetic') cosmetic++;
-            else if (f.product_category === 'Perfume No Brand') perfumeNoBrand++;
-            else if (f.product_category === 'Perfume Brand') perfumeBrand++;
-            else if (f.product_category === 'Food Supplement') supplement++;
-
+            cosmetic++;
             const st = f.latest_version ? f.latest_version.version_status : 'DRAFT';
             if (st === 'DRAFT') drafts++;
             else if (st === 'UNDER_REVIEW') underReview++;
@@ -56,9 +48,6 @@ export function DashboardPage({ setCurrentPage }) {
           setStats({
             total: list.length,
             cosmetic,
-            perfumeNoBrand,
-            perfumeBrand,
-            supplement,
             drafts,
             underReview,
             forApproval,
@@ -78,7 +67,7 @@ export function DashboardPage({ setCurrentPage }) {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Formulation Command Center</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time management for Cosmetic, Perfume, and Food Supplement Formulations.
+            Real-time management for Cosmetic Formulations and Production Compounding MES.
           </p>
         </div>
         <div className="flex gap-3">
@@ -92,56 +81,29 @@ export function DashboardPage({ setCurrentPage }) {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Total Formulas */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Formulas</span>
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
-              <FlaskConical className="w-4 h-4" />
-            </div>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Active Formulas</span>
+            <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.total}</p>
+            <p className="text-xs text-slate-500 mt-1">Active in Master Database</p>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mt-2">{stats.total}</p>
-          <p className="text-xs text-slate-500 mt-1">Active in Master Database</p>
+          <div className="p-4 bg-blue-50 text-blue-700 rounded-2xl">
+            <FlaskConical className="w-6 h-6" />
+          </div>
         </div>
 
         {/* Cosmetic */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cosmetics</span>
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
-              <Layers className="w-4 h-4" />
-            </div>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Cosmetics Formulations</span>
+            <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.cosmetic}</p>
+            <p className="text-xs text-slate-500 mt-1">Phase-Based Skincare & Personal Care</p>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mt-2">{stats.cosmetic}</p>
-          <p className="text-xs text-slate-500 mt-1">Phased Formulations</p>
-        </div>
-
-        {/* Perfumes */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Perfumes</span>
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
-              <Sparkles className="w-4 h-4" />
-            </div>
+          <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl">
+            <Layers className="w-6 h-6" />
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <p className="text-2xl font-bold text-slate-900">{stats.perfumeNoBrand + stats.perfumeBrand}</p>
-            <span className="text-xs text-slate-500">({stats.perfumeNoBrand} Base / {stats.perfumeBrand} Brand)</span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">Concentration Tiers</p>
-        </div>
-
-        {/* Food Supplements */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Supplements</span>
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-slate-900 mt-2">{stats.supplement}</p>
-          <p className="text-xs text-slate-500 mt-1">Capsules & Tablets (q.s. Math)</p>
         </div>
       </div>
 
@@ -173,7 +135,7 @@ export function DashboardPage({ setCurrentPage }) {
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
           <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-600" /> Recently Modified Formulas
+            <Clock className="w-4 h-4 text-slate-600" /> Recently Modified Cosmetics Formulas
           </h3>
           <button
             onClick={() => setCurrentPage('formula-versions')}
@@ -214,3 +176,5 @@ export function DashboardPage({ setCurrentPage }) {
     </div>
   );
 }
+
+export default DashboardPage;
