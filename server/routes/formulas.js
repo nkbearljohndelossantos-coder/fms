@@ -715,8 +715,9 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
 
           const [bsId] = await trx('batch_steps').insert({
             batch_id: batchId,
-            batch_phase_id: bpId,
+            phase_id: bpId,
             step_number: inst.step_number || (i + 1),
+            material_id: (versionMaterials.find(m => m.id === inst.material_id || m.material_id === inst.material_id) || versionMaterials[i])?.material_id || null,
             instructions: inst.instruction_text,
             status: 'Pending',
             lock_version: 1,
@@ -875,8 +876,9 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
 
         const [bsId] = await trx('batch_steps').insert({
           batch_id: batchId,
-          batch_phase_id: bpId,
+          phase_id: bpId,
           step_number: inst.step_number || (i + 1),
+          material_id: (materials.find(m => m.id === inst.material_id || m.material_id === inst.material_id) || materials[i])?.material_id || null,
           instructions: inst.instruction_text,
           status: 'Pending',
           lock_version: 1,
