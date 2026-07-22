@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Info,
   Clock,
+  GitBranch,
 } from 'lucide-react';
 
 function StatusBadge({ status }) {
@@ -86,6 +87,7 @@ export function CosmeticFormulatorPage() {
           const f = d.data.formula;
           setActiveVersion({
             ...v,
+            formula_id: f.id,
             formula_code: f.code,
             formula_name: f.name,
             product_category: f.product_category,
@@ -175,6 +177,28 @@ export function CosmeticFormulatorPage() {
       });
   };
 
+  const handleCreateRevision = () => {
+    if (!activeVersion?.formula_id) return;
+    apiFetch(`/api/v1/formulas/${activeVersion.formula_id}/revisions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        revisionReason: `Draft revision from Approved V${activeVersion.major_version}.${activeVersion.minor_version}`,
+        parentVersionId: activeVersion.id,
+      }),
+    })
+      .then(res => res.json())
+      .then(d => {
+        if (d.success && (d.data?.version_id || d.versionId)) {
+          const newVerId = d.data?.version_id || d.versionId;
+          alert(`New draft version ${d.data?.version || 'V2.0'} created successfully!`);
+          fetchFormulas();
+          loadVersion(newVerId);
+        } else {
+          alert(`Revision Error: ${d.message}`);
+        }
+      });
+  };
+
   const handleWorkflow = async (action) => {
     if (!selectedVersionId) return;
 
@@ -206,6 +230,8 @@ export function CosmeticFormulatorPage() {
       alert(`Workflow Error: ${err.message}`);
     }
   };
+
+  const isReadOnly = activeVersion && (activeVersion.version_status === 'APPROVED' || activeVersion.version_status === 'SUPERSEDED' || activeVersion.version_status === 'LOCKED');
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -315,16 +341,36 @@ export function CosmeticFormulatorPage() {
                   Approve Version
                 </button>
               )}
+              {isReadOnly && (
+                <button
+                  onClick={handleCreateRevision}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+                >
+                  <GitBranch className="w-3.5 h-3.5" /> Create New Revision (Draft)
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Read Only Warning Banner for Approved Versions */}
+          {isReadOnly && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2 font-medium">
+              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                This version is <strong>{activeVersion.version_status}</strong> (read-only immutable). To edit or make changes, click <strong>Create New Revision (Draft)</strong> above.
+              </span>
+            </div>
+          )}
 
           {/* Composition Table */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 pb-3">
               <h3 className="font-bold text-slate-900 text-sm">Phase-Based Composition Table</h3>
-              <button onClick={() => addLine('Phase A - Water Phase')} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-200">
-                <Plus className="w-3.5 h-3.5" /> Add Material Line
-              </button>
+              {!isReadOnly && (
+                <button onClick={() => addLine('Phase A - Water Phase')} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-200">
+                  <Plus className="w-3.5 h-3.5" /> Add Material Line
+                </button>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -336,59 +382,77 @@ export function CosmeticFormulatorPage() {
                     <th className="p-3">Percentage (%)</th>
                     <th className="p-3">Function</th>
                     <th className="p-3">UOM</th>
-                    <th className="p-3 text-center">Remove</th>
+                    {!isReadOnly && <th className="p-3 text-center">Remove</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {materials.map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-3">
-                        <select
-                          value={m.phase_name || 'Phase A - Water Phase'}
-                          onChange={e => handleMaterialChange(idx, 'phase_name', e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-semibold"
-                        >
-                          <option value="Phase A - Water Phase">Phase A - Water Phase</option>
-                          <option value="Phase B - Surfactant Phase">Phase B - Surfactant Phase</option>
-                          <option value="Phase C - Active Phase">Phase C - Active Phase</option>
-                          <option value="Cooling Phase">Cooling Phase</option>
-                          <option value="Post-Addition Phase">Post-Addition Phase</option>
-                        </select>
+                        {isReadOnly ? (
+                          <span className="font-semibold text-slate-900">{m.phase_name}</span>
+                        ) : (
+                          <select
+                            value={m.phase_name || 'Phase A - Water Phase'}
+                            onChange={e => handleMaterialChange(idx, 'phase_name', e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-semibold"
+                          >
+                            <option value="Phase A - Water Phase">Phase A - Water Phase</option>
+                            <option value="Phase B - Surfactant Phase">Phase B - Surfactant Phase</option>
+                            <option value="Phase C - Active Phase">Phase C - Active Phase</option>
+                            <option value="Cooling Phase">Cooling Phase</option>
+                            <option value="Post-Addition Phase">Post-Addition Phase</option>
+                          </select>
+                        )}
                       </td>
                       <td className="p-3">
-                        <select
-                          value={m.material_id}
-                          onChange={e => handleMaterialChange(idx, 'material_id', e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-medium w-64"
-                        >
-                          {availableMaterials.map(mat => (
-                            <option key={mat.id} value={mat.id}>{mat.code} — {mat.name}</option>
-                          ))}
-                        </select>
+                        {isReadOnly ? (
+                          <span className="font-medium text-slate-900">{m.material_code_snapshot} — {m.material_name_snapshot}</span>
+                        ) : (
+                          <select
+                            value={m.material_id}
+                            onChange={e => handleMaterialChange(idx, 'material_id', e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-medium w-64"
+                          >
+                            {availableMaterials.map(mat => (
+                              <option key={mat.id} value={mat.id}>{mat.code} — {mat.name}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="p-3">
-                        <input
-                          type="number"
-                          step="0.0001"
-                          value={m.percentage}
-                          onChange={e => handleMaterialChange(idx, 'percentage', e.target.value)}
-                          className="w-28 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-mono font-bold"
-                        />
+                        {isReadOnly ? (
+                          <span className="font-mono font-bold text-slate-900">{Number(m.percentage).toFixed(4)}%</span>
+                        ) : (
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={m.percentage}
+                            onChange={e => handleMaterialChange(idx, 'percentage', e.target.value)}
+                            className="w-28 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-mono font-bold"
+                          />
+                        )}
                       </td>
                       <td className="p-3">
-                        <input
-                          type="text"
-                          value={m.function_name}
-                          onChange={e => handleMaterialChange(idx, 'function_name', e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 w-40"
-                        />
+                        {isReadOnly ? (
+                          <span className="text-slate-800">{m.function_name}</span>
+                        ) : (
+                          <input
+                            type="text"
+                            value={m.function_name}
+                            onChange={e => handleMaterialChange(idx, 'function_name', e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 w-40"
+                          />
+                        )}
                       </td>
                       <td className="p-3 font-mono text-slate-700 font-bold">{m.uom_snapshot || 'g'}</td>
-                      <td className="p-3 text-center">
-                        <button onClick={() => removeLine(idx)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+                      {!isReadOnly && (
+                        <td className="p-3 text-center">
+                          <button onClick={() => removeLine(idx)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -406,9 +470,10 @@ export function CosmeticFormulatorPage() {
                 <label className="block text-slate-500 font-medium mb-1">Target pH Range</label>
                 <input
                   type="text"
+                  readOnly={isReadOnly}
                   value={cosmeticDetails.target_ph || ''}
                   onChange={e => setCosmeticDetails({ ...cosmeticDetails, target_ph: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono"
+                  className={`w-full border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
                   placeholder="e.g. 5.50 - 6.00"
                 />
               </div>
@@ -416,9 +481,10 @@ export function CosmeticFormulatorPage() {
                 <label className="block text-slate-500 font-medium mb-1">Target Viscosity (cP)</label>
                 <input
                   type="text"
+                  readOnly={isReadOnly}
                   value={cosmeticDetails.viscosity_cp || ''}
                   onChange={e => setCosmeticDetails({ ...cosmeticDetails, viscosity_cp: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono"
+                  className={`w-full border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
                   placeholder="e.g. 4500 - 6000 cP"
                 />
               </div>
@@ -426,9 +492,10 @@ export function CosmeticFormulatorPage() {
                 <label className="block text-slate-500 font-medium mb-1">Appearance</label>
                 <input
                   type="text"
+                  readOnly={isReadOnly}
                   value={cosmeticDetails.appearance || ''}
                   onChange={e => setCosmeticDetails({ ...cosmeticDetails, appearance: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900"
+                  className={`w-full border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 ${isReadOnly ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'}`}
                   placeholder="e.g. Clear viscous liquid"
                 />
               </div>
