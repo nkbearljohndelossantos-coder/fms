@@ -1,59 +1,110 @@
 import React, { useEffect, useState } from 'react';
-import { StatusBadge } from '../components/Badge';
-import { Plus, Save, Send } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
+import {
+  FlaskConical,
+  Save,
+  Send,
+  Plus,
+  Trash2,
+  CheckCircle,
+  AlertTriangle,
+  Lock,
+  ChevronDown,
+  Info,
+  Clock,
+} from 'lucide-react';
 
-export function CosmeticFormulatorPage({ setCurrentPage }) {
+function StatusBadge({ status }) {
+  const map = {
+    DRAFT: { label: 'DRAFT', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+    UNDER_REVIEW: { label: 'UNDER REVIEW', bg: 'bg-amber-100 text-amber-900 border-amber-300' },
+    FOR_APPROVAL: { label: 'FOR APPROVAL', bg: 'bg-blue-100 text-blue-900 border-blue-300' },
+    APPROVED: { label: 'APPROVED', bg: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+    REJECTED: { label: 'REJECTED', bg: 'bg-rose-100 text-rose-900 border-rose-300' },
+    SUPERSEDED: { label: 'SUPERSEDED', bg: 'bg-slate-200 text-slate-600 border-slate-400' },
+  };
+
+  const conf = map[status] || map.DRAFT;
+  return (
+    <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${conf.bg}`}>
+      {conf.label}
+    </span>
+  );
+}
+
+export function CosmeticFormulatorPage() {
+  const { user } = useAuth();
   const [formulas, setFormulas] = useState([]);
   const [selectedVersionId, setSelectedVersionId] = useState(null);
   const [activeVersion, setActiveVersion] = useState(null);
-  const [availableMaterials, setAvailableMaterials] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [availableMaterials, setAvailableMaterials] = useState([]);
   const [cosmeticDetails, setCosmeticDetails] = useState({
     target_ph: '5.50 - 6.00',
     viscosity_cp: '4500 - 6000 cP',
     appearance: 'Clear gel liquid',
     color: 'Water clear',
     odor: 'Clean subtle characteristic',
-    texture: 'Smooth viscous gel',
-    preservative_system: 'Phenoxyethanol 1.0%',
-    manufacturing_conditions: 'Standard stainless steel jacketed vessel with propeller mixer',
   });
-
-  const [totalPct, setTotalPct] = useState('0.000000');
-  const [isValidPct, setIsValidPct] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    apiFetch('/api/v1/materials')
-      .then(res => res.json())
-      .then(d => d.success && setAvailableMaterials(d.data));
-
+    fetchAvailableMaterials();
     fetchFormulas();
   }, []);
+
+  const fetchAvailableMaterials = () => {
+    apiFetch('/api/v1/materials')
+      .then(res => res.json())
+      .then(d => {
+        if (d.success) setAvailableMaterials(d.data || []);
+      });
+  };
 
   const fetchFormulas = () => {
     apiFetch('/api/v1/formulas?category=Cosmetic')
       .then(res => res.json())
       .then(d => {
-        if (d.success && d.data) {
+        if (d.success && d.data?.length) {
           setFormulas(d.data);
-          if (d.data.length > 0 && !selectedVersionId) {
-            const firstVer = d.data[0].latest_version || d.data[0].versions[0];
-            if (firstVer) loadVersion(firstVer.id);
+          const firstVerId = d.data[0].versions[0]?.id;
+          if (firstVerId && !selectedVersionId) {
+            loadVersion(firstVerId);
           }
         }
       });
   };
 
-  const loadVersion = (vId) => {
-    setSelectedVersionId(vId);
-    apiFetch(`/api/v1/formulas/versions/${vId}`)
+  const loadVersion = (versionId) => {
+    setSelectedVersionId(versionId);
+    apiFetch(`/api/v1/formulas/versions/${versionId}`)
       .then(res => res.json())
       .then(d => {
         if (d.success && d.data) {
-          setActiveVersion(d.data.version);
-          setMaterials(d.data.materials || []);
+          const v = d.data.version;
+          const f = d.data.formula;
+          setActiveVersion({
+            ...v,
+            formula_code: f.code,
+            formula_name: f.name,
+            product_category: f.product_category,
+            product_subcategory: f.product_subcategory,
+            brand_type: f.brand_type,
+          });
+
+          const loadedMats = (d.data.materials || []).map((m, idx) => ({
+            material_id: m.material_id,
+            material_code_snapshot: m.material_code,
+            material_name_snapshot: m.material_name,
+            uom_snapshot: m.uom_snapshot || 'g',
+            percentage: String(m.percentage || '0.00'),
+            function_name: m.function_name || 'Active',
+            phase_name: m.phase_name || 'Phase A - Water Phase',
+            addition_order: idx + 1,
+          }));
+
+          setMaterials(loadedMats);
           if (d.data.categoryDetails) {
             setCosmeticDetails(d.data.categoryDetails);
           }
@@ -61,25 +112,18 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
       });
   };
 
-  useEffect(() => {
-    let sum = 0;
-    materials.forEach(m => {
-      sum += Number(m.percentage || 0);
-    });
-    setTotalPct(sum.toFixed(2));
-    setIsValidPct(Math.abs(sum - 100) <= 0.01);
-  }, [materials]);
+  const totalPct = materials.reduce((acc, m) => acc + (parseFloat(m.percentage) || 0), 0).toFixed(2);
+  const isValidPct = Math.abs(parseFloat(totalPct) - 100) < 0.05;
 
   const addLine = (phaseName = 'Phase A - Water Phase') => {
-    if (availableMaterials.length === 0) return;
-    const mat = availableMaterials[0];
+    const mat = availableMaterials[0] || { id: 1, code: 'MAT-001', name: 'Material', uom: 'g' };
     setMaterials([
       ...materials,
       {
         material_id: mat.id,
         material_code_snapshot: mat.code,
         material_name_snapshot: mat.name,
-        uom_snapshot: mat.uom,
+        uom_snapshot: mat.uom || 'g',
         percentage: '0.00',
         function_name: 'Solvent Base',
         phase_name: phaseName,
@@ -100,7 +144,7 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
         next[idx].material_id = mat.id;
         next[idx].material_code_snapshot = mat.code;
         next[idx].material_name_snapshot = mat.name;
-        next[idx].uom_snapshot = mat.uom;
+        next[idx].uom_snapshot = mat.uom || 'g';
       }
     } else {
       next[idx][field] = val;
@@ -131,7 +175,7 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
       });
   };
 
-  const handleWorkflow = (action) => {
+  const handleWorkflow = async (action) => {
     if (!selectedVersionId) return;
 
     if (action === 'SUBMIT' || action === 'ENDORSE' || action === 'APPROVE') {
@@ -145,28 +189,27 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
       }
     }
 
-    apiFetch(`/api/v1/formulas/versions/${selectedVersionId}/workflow`, {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-    })
-      .then(res => res.json())
-      .then(d => {
-        if (d.success) {
-          alert(`Workflow action '${action}' completed! Formula transitioned to ${d.message.split('to ')[1] || 'new state'}.`);
-          loadVersion(selectedVersionId);
-          fetchFormulas();
-        } else {
-          alert(`Workflow Validation Error: ${d.message}`);
-        }
-      })
-      .catch(err => {
-        alert(`Workflow Execution Error: ${err.message}`);
+    try {
+      const res = await apiFetch(`/api/v1/formulas/versions/${selectedVersionId}/workflow`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
       });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        alert(`Workflow action '${action}' completed! Formula transitioned to ${d.message.split('to ')[1] || 'new state'}.`);
+        loadVersion(selectedVersionId);
+        fetchFormulas();
+      } else {
+        alert(`Workflow Policy Warning (HTTP ${res.status}): ${d.message || 'Operation failed'}`);
+      }
+    } catch (err) {
+      alert(`Workflow Error: ${err.message}`);
+    }
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Top Header */}
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Cosmetic Formulation Workspace</h1>
@@ -227,7 +270,7 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
               </div>
               <div>
                 <span className="text-slate-500 block font-medium">Ref. Batch Size</span>
-                <span className="font-mono font-bold text-slate-900">{Number(activeVersion.target_batch_size || 100).toFixed(2)} {activeVersion.target_batch_uom || 'kg'}</span>
+                <span className="font-mono font-bold text-slate-900">{Number(activeVersion.target_batch_size || 100).toFixed(2)} {activeVersion.target_batch_uom || 'g'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block font-medium">Change Type</span>
@@ -329,20 +372,22 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
                           step="0.0001"
                           value={m.percentage}
                           onChange={e => handleMaterialChange(idx, 'percentage', e.target.value)}
-                          className="w-24 bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono font-bold text-slate-900"
+                          className="w-28 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 font-mono font-bold"
                         />
                       </td>
                       <td className="p-3">
                         <input
                           type="text"
-                          value={m.function_name || ''}
+                          value={m.function_name}
                           onChange={e => handleMaterialChange(idx, 'function_name', e.target.value)}
-                          className="w-40 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900"
+                          className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 w-40"
                         />
                       </td>
-                      <td className="p-3 font-mono text-slate-700 font-bold">{m.uom_snapshot}</td>
+                      <td className="p-3 font-mono text-slate-700 font-bold">{m.uom_snapshot || 'g'}</td>
                       <td className="p-3 text-center">
-                        <button onClick={() => removeLine(idx)} className="text-rose-600 hover:text-rose-800 font-bold">✕</button>
+                        <button onClick={() => removeLine(idx)} className="p-1 text-rose-600 hover:bg-rose-50 rounded">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -351,21 +396,41 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
             </div>
           </div>
 
-          {/* Cosmetic Parameters Grid */}
+          {/* Cosmetic Technical Specifications */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">Cosmetic Specifications</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <h3 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">
+              Cosmetic Quality Parameters & Specifications
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-slate-600 mb-1">Target pH</label>
-                <input type="text" value={cosmeticDetails.target_ph || ''} onChange={e => setCosmeticDetails({ ...cosmeticDetails, target_ph: e.target.value })} className="w-full bg-white border border-slate-300 rounded p-2 text-slate-900" />
+                <label className="block text-slate-500 font-medium mb-1">Target pH Range</label>
+                <input
+                  type="text"
+                  value={cosmeticDetails.target_ph || ''}
+                  onChange={e => setCosmeticDetails({ ...cosmeticDetails, target_ph: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono"
+                  placeholder="e.g. 5.50 - 6.00"
+                />
               </div>
               <div>
-                <label className="block text-slate-600 mb-1">Viscosity (cP)</label>
-                <input type="text" value={cosmeticDetails.viscosity_cp || ''} onChange={e => setCosmeticDetails({ ...cosmeticDetails, viscosity_cp: e.target.value })} className="w-full bg-white border border-slate-300 rounded p-2 text-slate-900" />
+                <label className="block text-slate-500 font-medium mb-1">Target Viscosity (cP)</label>
+                <input
+                  type="text"
+                  value={cosmeticDetails.viscosity_cp || ''}
+                  onChange={e => setCosmeticDetails({ ...cosmeticDetails, viscosity_cp: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono"
+                  placeholder="e.g. 4500 - 6000 cP"
+                />
               </div>
               <div>
-                <label className="block text-slate-600 mb-1">Appearance</label>
-                <input type="text" value={cosmeticDetails.appearance || ''} onChange={e => setCosmeticDetails({ ...cosmeticDetails, appearance: e.target.value })} className="w-full bg-white border border-slate-300 rounded p-2 text-slate-900" />
+                <label className="block text-slate-500 font-medium mb-1">Appearance</label>
+                <input
+                  type="text"
+                  value={cosmeticDetails.appearance || ''}
+                  onChange={e => setCosmeticDetails({ ...cosmeticDetails, appearance: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900"
+                  placeholder="e.g. Clear viscous liquid"
+                />
               </div>
             </div>
           </div>
@@ -374,3 +439,5 @@ export function CosmeticFormulatorPage({ setCurrentPage }) {
     </div>
   );
 }
+
+export default CosmeticFormulatorPage;
