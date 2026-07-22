@@ -30,6 +30,9 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust Proxy for reverse-proxies (Nginx, Apache, Hostinger) to support express-rate-limit
+app.set('trust proxy', 1);
+
 // Simple Cookie Parser Middleware helper
 app.use((req, res, next) => {
   req.cookies = {};

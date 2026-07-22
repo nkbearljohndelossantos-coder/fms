@@ -161,6 +161,93 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/v1/formulas/versions/:versionId (Save draft version composition & specs)
+router.put('/versions/:versionId', authenticateToken, async (req, res) => {
+  try {
+    const { versionId } = req.params;
+    const { materials, categoryDetails } = req.body;
+
+    const version = await db('formula_versions').where({ id: versionId }).first();
+    if (!version) {
+      return res.status(404).json({ success: false, message: 'Formula version not found' });
+    }
+
+    if (version.version_status === 'APPROVED' || version.version_status === 'SUPERSEDED' || version.version_status === 'REJECTED' || version.version_status === 'LOCKED') {
+      return res.status(422).json({
+        success: false,
+        message: `Formula Version V${version.major_version}.${version.minor_version} is ${version.version_status} and locked as read-only. Create a new draft revision to modify.`,
+      });
+    }
+
+    await db.transaction(async (trx) => {
+      await trx('formula_version_materials').where({ version_id: versionId }).del();
+
+      if (Array.isArray(materials) && materials.length > 0) {
+        const insertMats = materials.map((m, idx) => ({
+          version_id: versionId,
+          phase_id: m.phase_id || null,
+          material_id: m.material_id,
+          material_code_snapshot: m.material_code_snapshot,
+          material_name_snapshot: m.material_name_snapshot,
+          uom_snapshot: m.uom_snapshot || 'g',
+          percentage: m.percentage || '0.000000',
+          calculated_quantity: m.calculated_quantity || '0.000000',
+          addition_order: m.addition_order || (idx + 1),
+          function_name: m.function_name || null,
+          phase_name: m.phase_name || null,
+          temp_c: m.temp_c || null,
+          mixing_speed_rpm: m.mixing_speed_rpm || null,
+          duration_min: m.duration_min || null,
+        }));
+        await trx('formula_version_materials').insert(insertMats);
+      }
+
+      const formula = await trx('formulas').where({ id: version.formula_id }).first();
+      const cat = formula?.product_category || 'Cosmetic';
+
+      if (cat === 'Cosmetic' || cat === 'Cosmetics') {
+        const exists = await trx('cosmetic_formula_details').where({ version_id: versionId }).first();
+        const detailsPayload = {
+          target_ph: categoryDetails?.target_ph || null,
+          viscosity_cp: categoryDetails?.viscosity_cp || null,
+          appearance: categoryDetails?.appearance || null,
+          color: categoryDetails?.color || null,
+          odor: categoryDetails?.odor || null,
+          texture: categoryDetails?.texture || null,
+          preservative_system: categoryDetails?.preservative_system || null,
+          manufacturing_conditions: categoryDetails?.manufacturing_conditions || null,
+        };
+
+        if (exists) {
+          await trx('cosmetic_formula_details').where({ version_id: versionId }).update(detailsPayload);
+        } else {
+          await trx('cosmetic_formula_details').insert({ version_id: versionId, ...detailsPayload });
+        }
+      }
+
+      await trx('formula_versions')
+        .where({ id: versionId })
+        .update({
+          updated_at: trx.fn.now(),
+        });
+
+      await AuditService.logEvent({
+        trx,
+        userId: req.user.id,
+        userRole: req.user.roles[0] || 'User',
+        action: 'UPDATE_FORMULA_VERSION',
+        entityType: 'FormulaVersion',
+        entityId: versionId,
+        newValues: { materials_count: materials?.length || 0 },
+      });
+    });
+
+    return res.json({ success: true, message: 'Formula draft version updated successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Database operation failed', error: err.message });
+  }
+});
+
 // 3. GET /api/v1/formulas/:id/revisions
 router.get('/:id/revisions', authenticateToken, async (req, res) => {
   try {
