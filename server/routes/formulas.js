@@ -65,26 +65,31 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const formulas = await query;
 
+    if (!formulas || formulas.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
     const formulaIds = formulas.map(f => f.id);
     const versions = await db('formula_versions')
-      .whereIn('formula_id', formulaIds.length ? formulaIds : [0])
+      .whereIn('formula_id', formulaIds)
       .orderBy('major_version', 'desc')
       .orderBy('minor_version', 'desc');
 
     const result = formulas.map(f => {
-      const fVersions = versions.filter(v => v.formula_id === f.id);
+      const fVersions = versions.filter(v => Number(v.formula_id) === Number(f.id));
       const activeVer = fVersions.find(v => v.version_status === 'APPROVED') || fVersions[0] || null;
       return {
         ...f,
-        active_version: activeVer ? `${activeVer.major_version}.${activeVer.minor_version}` : '1.0',
+        active_version: activeVer ? `${activeVer.major_version ?? 1}.${activeVer.minor_version ?? 0}` : '1.0',
         active_version_id: activeVer?.id || null,
         versions: fVersions.map(v => ({
           id: v.id,
-          version: v.version_code || `V${v.major_version ?? 1}.${v.minor_version ?? 0}`,
+          version: `V${v.major_version ?? 1}.${v.minor_version ?? 0}`,
           major_version: v.major_version ?? 1,
           minor_version: v.minor_version ?? 0,
-          version_status: v.version_status,
-          target_batch_size: v.target_batch_size,
+          version_status: v.version_status || 'DRAFT',
+          target_batch_size: v.target_batch_size || '100.00',
+          target_batch_uom: v.target_batch_uom || 'g',
           created_at: v.created_at,
         })),
       };
@@ -171,7 +176,7 @@ router.get('/:id/revisions', authenticateToken, async (req, res) => {
   }
 });
 
-// 4. POST /api/v1/formulas/:id/revisions (SAFE FIELD MAPPING FOR MYSQL & SQLITE)
+// 4. POST /api/v1/formulas/:id/revisions
 router.post('/:id/revisions', authenticateToken, async (req, res) => {
   try {
     const formulaId = req.params.id;
@@ -200,13 +205,12 @@ router.post('/:id/revisions', authenticateToken, async (req, res) => {
         formula_id: formulaId,
         major_version: nextMajor,
         minor_version: nextMinor,
-        version_code: `V${nextMajor}.${nextMinor}`,
         lock_version: 0,
         version_status: 'DRAFT',
         change_type: 'REVISION',
         revision_reason: revisionReason || `Draft revision from Version ${parentVer?.major_version || 1}.${parentVer?.minor_version || 0}`,
         target_batch_size: parentVer?.target_batch_size || '100.000000',
-        target_batch_uom: parentVer?.target_batch_uom || 'kg',
+        target_batch_uom: parentVer?.target_batch_uom || 'g',
         expected_yield: '100.000000',
         created_by: req.user.id,
       };
@@ -317,10 +321,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 6. POST /api/v1/formulas
+// 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft)
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
-    const { name, category, formula_type, product_category, reference_batch_size, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
+    const { name, category, formula_type, product_category, reference_batch_size, batchSize = '100.000000', batchUom = 'g', revisionReason = 'Initial creation' } = req.body;
 
     const formulaName = name || 'New Formula';
     const rawCategory = category || formula_type || product_category || 'Cosmetic';
@@ -345,13 +349,12 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
         formula_id: formulaId,
         major_version: 1,
         minor_version: 0,
-        version_code: 'V1.0',
         lock_version: 0,
         version_status: 'DRAFT',
         change_type: 'INITIAL_CREATION',
         revision_reason: revisionReason,
         target_batch_size: targetBatchSize,
-        target_batch_uom: batchUom,
+        target_batch_uom: batchUom || 'g',
         expected_yield: '100.000000',
         created_by: req.user.id,
       };
