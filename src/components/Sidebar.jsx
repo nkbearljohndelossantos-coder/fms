@@ -17,11 +17,12 @@ import {
   QrCode,
   Play,
   Activity,
+  GitBranch,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export function Sidebar({ currentPage, setCurrentPage }) {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const [materialsOpen, setMaterialsOpen] = useState(true);
   const [formulationsOpen, setFormulationsOpen] = useState(true);
   const [productionOpen, setProductionOpen] = useState(true);
@@ -171,6 +172,17 @@ export function Sidebar({ currentPage, setCurrentPage }) {
               </button>
               {formulationsOpen && (
                 <div className="ml-4 pl-3 border-l border-slate-800 mt-1 space-y-1">
+                  <button
+                    onClick={() => setCurrentPage('formulation-cosmetic')}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-xs ${
+                      isCurrent('formulation-cosmetic')
+                        ? 'bg-slate-800 text-blue-400 font-semibold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <FlaskConical className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Cosmetic Workspace</span>
+                  </button>
                   <button
                     onClick={() => setCurrentPage('create-formula')}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-xs ${
