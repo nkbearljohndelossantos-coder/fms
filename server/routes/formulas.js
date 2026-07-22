@@ -47,10 +47,10 @@ async function saveFormulaCostSnapshot(trx, versionId, costingResult) {
   });
 }
 
-// GET /api/v1/formulas
+// 1. GET /api/v1/formulas
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { category, search, status } = req.query;
+    const { category, search } = req.query;
 
     let query = db('formulas').select('*').orderBy('id', 'desc');
 
@@ -94,32 +94,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/v1/formulas/:id
-router.get('/:id', authenticateToken, async (req, res) => {
-  try {
-    const formula = await db('formulas').where({ id: req.params.id }).first();
-    if (!formula) {
-      return res.status(404).json({ success: false, message: 'Formula not found' });
-    }
-
-    const versions = await db('formula_versions')
-      .where({ formula_id: formula.id })
-      .orderBy('major_version', 'desc')
-      .orderBy('minor_version', 'desc');
-
-    return res.json({
-      success: true,
-      data: {
-        ...formula,
-        versions,
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch formula details', error: err.message });
-  }
-});
-
-// GET /api/v1/formulas/versions/:versionId
+// 2. GET /api/v1/formulas/versions/:versionId (SPECIFIC SUB-PATH FIRST)
 router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   try {
     const { versionId } = req.params;
@@ -178,7 +153,139 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/v1/formulas (Create master formula & initial v1.0 draft)
+// 3. GET /api/v1/formulas/:id/revisions (SPECIFIC REVISIONS ROUTE BEFORE GENERIC GET /:id)
+router.get('/:id/revisions', authenticateToken, async (req, res) => {
+  try {
+    const formulaId = req.params.id;
+    const versions = await db('formula_versions')
+      .where({ formula_id: formulaId })
+      .orderBy('major_version', 'desc')
+      .orderBy('minor_version', 'desc');
+
+    return res.json({ success: true, data: versions });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch revisions', error: err.message });
+  }
+});
+
+// 4. POST /api/v1/formulas/:id/revisions (CREATE DRAFT REVISION FROM EXISTING FORMULA)
+router.post('/:id/revisions', authenticateToken, async (req, res) => {
+  try {
+    const formulaId = req.params.id;
+    const { revisionReason, parentVersionId } = req.body;
+
+    const formula = await db('formulas').where({ id: formulaId }).first();
+    if (!formula) {
+      return res.status(404).json({ success: false, message: 'Formula not found.' });
+    }
+
+    const sourceVersionId = parentVersionId || (
+      await db('formula_versions')
+        .where({ formula_id: formulaId })
+        .orderBy('major_version', 'desc')
+        .orderBy('minor_version', 'desc')
+        .first()
+    )?.id;
+
+    const parentVer = sourceVersionId ? await db('formula_versions').where({ id: sourceVersionId }).first() : null;
+
+    const nextMajor = (parentVer?.major_version || 1) + 1;
+    const nextMinor = 0;
+
+    const result = await db.transaction(async (trx) => {
+      const insertVer = {
+        formula_id: formulaId,
+        major_version: nextMajor,
+        minor_version: nextMinor,
+        version_code: `V${nextMajor}.${nextMinor}`,
+        lock_version: 0,
+        version_status: 'DRAFT',
+        change_type: 'REVISION',
+        revision_reason: revisionReason || `Draft revision from Version ${parentVer?.major_version || 1}.${parentVer?.minor_version || 0}`,
+        target_batch_size: parentVer?.target_batch_size || '100.000000',
+        target_batch_uom: parentVer?.target_batch_uom || 'kg',
+        expected_yield: '100.000000',
+        created_by: req.user.id,
+      };
+
+      const [newVersionId] = await trx('formula_versions').insert(insertVer).then(r => [r[0]]);
+
+      if (sourceVersionId) {
+        const oldMats = await trx('formula_version_materials').where({ version_id: sourceVersionId });
+        for (const m of oldMats) {
+          await trx('formula_version_materials').insert({
+            version_id: newVersionId,
+            material_id: m.material_id,
+            material_code_snapshot: m.material_code_snapshot,
+            material_name_snapshot: m.material_name_snapshot,
+            percentage: m.percentage,
+            phase_name: m.phase_name,
+            addition_order: m.addition_order,
+            mixing_speed_rpm: m.mixing_speed_rpm,
+            temperature_celsius: m.temperature_celsius,
+            mixing_time_minutes: m.mixing_time_minutes,
+            tolerance_percent: m.tolerance_percent,
+            quality_grade_required: m.quality_grade_required,
+            notes: m.notes,
+          });
+        }
+      }
+
+      await AuditService.logEvent({
+        trx,
+        userId: req.user.id,
+        userRole: req.user.roles[0] || 'Chemist',
+        action: 'CREATE_REVISION',
+        entityType: 'FormulaVersion',
+        entityId: newVersionId,
+        newValues: { formula_id: formulaId, version: `V${nextMajor}.${nextMinor}` },
+      });
+
+      return { newVersionId, version: `V${nextMajor}.${nextMinor}` };
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'New draft revision created successfully.',
+      data: {
+        formula_id: String(formulaId),
+        version_id: String(result.newVersionId),
+        version: result.version,
+        version_status: 'DRAFT',
+      },
+      versionId: result.newVersionId,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to create formula revision.', error: err.message });
+  }
+});
+
+// 5. GET /api/v1/formulas/:id (GENERIC PARAMETERIZED ROUTE PLACED AFTER SPECIFIC SUB-PATHS)
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const formula = await db('formulas').where({ id: req.params.id }).first();
+    if (!formula) {
+      return res.status(404).json({ success: false, message: 'Formula not found' });
+    }
+
+    const versions = await db('formula_versions')
+      .where({ formula_id: formula.id })
+      .orderBy('major_version', 'desc')
+      .orderBy('minor_version', 'desc');
+
+    return res.json({
+      success: true,
+      data: {
+        ...formula,
+        versions,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch formula details', error: err.message });
+  }
+});
+
+// 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft)
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
     const { name, category, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
@@ -271,7 +378,7 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
   }
 });
 
-// POST /api/v1/formulas/versions/:versionId/workflow (Submit, Return, Endorse, Approve, Reject with Maker-Checker)
+// 7. POST /api/v1/formulas/versions/:versionId/workflow
 router.post('/versions/:versionId/workflow', authenticateToken, async (req, res) => {
   try {
     const { versionId } = req.params;
@@ -385,7 +492,7 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
   }
 });
 
-// POST /api/v1/formulas/versions/:versionId/create-batch (Generate Atomic Relational Batch Snapshot)
+// 8. POST /api/v1/formulas/versions/:versionId/create-batch
 router.post('/versions/:versionId/create-batch', authenticateToken, async (req, res) => {
   try {
     const { versionId } = req.params;
@@ -523,113 +630,6 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Batch creation failed', error: err.message });
-  }
-});
-
-// GET /api/v1/formulas/:id/revisions (List formula versions / revisions)
-router.get('/:id/revisions', authenticateToken, async (req, res) => {
-  try {
-    const formulaId = req.params.id;
-    const versions = await db('formula_versions')
-      .where({ formula_id: formulaId })
-      .orderBy('major_version', 'desc')
-      .orderBy('minor_version', 'desc');
-
-    return res.json({ success: true, data: versions });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch revisions', error: err.message });
-  }
-});
-
-// POST /api/v1/formulas/:id/revisions (Create new draft version revision from existing formula)
-router.post('/:id/revisions', authenticateToken, async (req, res) => {
-  try {
-    const formulaId = req.params.id;
-    const { revisionReason, parentVersionId } = req.body;
-
-    const formula = await db('formulas').where({ id: formulaId }).first();
-    if (!formula) {
-      return res.status(404).json({ success: false, message: 'Formula not found.' });
-    }
-
-    const sourceVersionId = parentVersionId || (
-      await db('formula_versions')
-        .where({ formula_id: formulaId })
-        .orderBy('major_version', 'desc')
-        .orderBy('minor_version', 'desc')
-        .first()
-    )?.id;
-
-    const parentVer = sourceVersionId ? await db('formula_versions').where({ id: sourceVersionId }).first() : null;
-
-    const nextMajor = (parentVer?.major_version || 1) + 1;
-    const nextMinor = 0;
-
-    const result = await db.transaction(async (trx) => {
-      const insertVer = {
-        formula_id: formulaId,
-        major_version: nextMajor,
-        minor_version: nextMinor,
-        version_code: `V${nextMajor}.${nextMinor}`,
-        lock_version: 0,
-        version_status: 'DRAFT',
-        change_type: 'REVISION',
-        revision_reason: revisionReason || `Draft revision from Version ${parentVer?.major_version || 1}.${parentVer?.minor_version || 0}`,
-        target_batch_size: parentVer?.target_batch_size || '100.000000',
-        target_batch_uom: parentVer?.target_batch_uom || 'kg',
-        expected_yield: '100.000000',
-        created_by: req.user.id,
-      };
-
-      const [newVersionId] = await trx('formula_versions').insert(insertVer).then(r => [r[0]]);
-
-      if (sourceVersionId) {
-        const oldMats = await trx('formula_version_materials').where({ version_id: sourceVersionId });
-        for (const m of oldMats) {
-          await trx('formula_version_materials').insert({
-            version_id: newVersionId,
-            material_id: m.material_id,
-            material_code_snapshot: m.material_code_snapshot,
-            material_name_snapshot: m.material_name_snapshot,
-            percentage: m.percentage,
-            phase_name: m.phase_name,
-            addition_order: m.addition_order,
-            mixing_speed_rpm: m.mixing_speed_rpm,
-            temperature_celsius: m.temperature_celsius,
-            mixing_time_minutes: m.mixing_time_minutes,
-            tolerance_percent: m.tolerance_percent,
-            quality_grade_required: m.quality_grade_required,
-            notes: m.notes,
-          });
-        }
-      }
-
-      await AuditService.logEvent({
-        trx,
-        userId: req.user.id,
-        userRole: req.user.roles[0] || 'Chemist',
-        action: 'CREATE_REVISION',
-        entityType: 'FormulaVersion',
-        entityId: newVersionId,
-        newValues: { formula_id: formulaId, version: `V${nextMajor}.${nextMinor}` },
-      });
-
-      return { newVersionId, version: `V${nextMajor}.${nextMinor}` };
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'New draft revision created successfully.',
-      data: {
-        formula_id: String(formulaId),
-        version_id: String(result.newVersionId),
-        version: result.version,
-        version_status: 'DRAFT',
-      },
-      versionId: result.newVersionId,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to create formula revision.', error: err.message });
   }
 });
 

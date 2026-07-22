@@ -27,7 +27,7 @@ import { OperatorFormulaViewPage } from './pages/operator/OperatorFormulaViewPag
 import { OperatorCompoundingScreen } from './pages/operator/OperatorCompoundingScreen';
 import { OperatorHistoryPage } from './pages/operator/OperatorHistoryPage';
 
-import { Lock, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 export function App() {
   const { user } = useAuth();
@@ -92,17 +92,20 @@ export function App() {
   const { title, subtitle } = getPageTitle();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+      {/* Dark Sidebar Only */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+      {/* Light Theme Main Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
         <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50 text-slate-900">
           {isDenied ? (
             <div className="p-8 max-w-xl mx-auto mt-12 text-center space-y-4">
-              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950 text-rose-600 rounded-3xl flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-3xl flex items-center justify-center mx-auto">
                 <ShieldAlert className="w-8 h-8" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Access Denied (HTTP 403 Forbidden)</h2>
+              <h2 className="text-xl font-bold text-slate-900">Access Denied (HTTP 403 Forbidden)</h2>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Compounding Operators are barred from accessing R&D Formulation Master Data, Material Master, Costing, Settings, or User Management.
               </p>
