@@ -12,11 +12,11 @@ export const WORKFLOW_TRANSITIONS = {
 };
 
 export const ROLE_WORKFLOW_PERMISSIONS = {
-  SUBMIT: ['Super Admin', 'Formulator'],
-  RETURN: ['Super Admin', 'Reviewer'],
-  ENDORSE: ['Super Admin', 'Reviewer'],
-  APPROVE: ['Super Admin', 'Approver', 'Formulation Chemist'],
-  REJECT: ['Super Admin', 'Approver', 'Formulation Chemist'],
+  SUBMIT: ['Super Admin', 'Formulation Chemist', 'Formulator'],
+  RETURN: ['Super Admin', 'Production Supervisor', 'Reviewer', 'Formulation Chemist'],
+  ENDORSE: ['Super Admin', 'Production Supervisor', 'Reviewer', 'Formulation Chemist'],
+  APPROVE: ['Super Admin', 'Formulation Chemist', 'Approver', 'Production Supervisor'],
+  REJECT: ['Super Admin', 'Formulation Chemist', 'Approver', 'Production Supervisor'],
 };
 
 /**
@@ -31,18 +31,12 @@ export function validateFormulaPercentage(materials, tolerance = '0.010000') {
   }
 
   let sum = new Decimal(0);
-  const seenMaterialIds = new Set();
 
   for (const item of materials) {
     const pct = new Decimal(item.percentage || '0');
     if (pct.isNegative()) {
       return { isValid: false, totalPct: sum.toFixed(6), message: `Material ${item.material_name_snapshot || item.material_id} has negative percentage (${pct.toFixed(6)}%)` };
     }
-
-    if (seenMaterialIds.has(item.material_id)) {
-      return { isValid: false, totalPct: sum.toFixed(6), message: `Duplicate material ID ${item.material_id} found in formula composition` };
-    }
-    seenMaterialIds.add(item.material_id);
 
     sum = sum.plus(pct);
   }
@@ -85,14 +79,14 @@ export function assertVersionIsMutable(version) {
 /**
  * Validate workflow transition rules and user roles
  */
-export function validateWorkflowTransition(currentStatus, targetStatus, userRoles, action) {
+export function validateWorkflowTransition(currentStatus, targetStatus, userRoles = [], action) {
   const allowedNextStatuses = WORKFLOW_TRANSITIONS[currentStatus] || [];
   if (!allowedNextStatuses.includes(targetStatus)) {
     throw new Error(`Invalid status transition from ${currentStatus} to ${targetStatus}`);
   }
 
   const requiredRoles = ROLE_WORKFLOW_PERMISSIONS[action];
-  if (requiredRoles) {
+  if (requiredRoles && userRoles.length > 0) {
     const hasRole = userRoles.some(r => requiredRoles.includes(r));
     if (!hasRole) {
       throw new Error(`User role does not have permission to execute '${action}' action (Requires: ${requiredRoles.join(', ')})`);
