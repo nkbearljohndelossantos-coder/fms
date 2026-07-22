@@ -94,7 +94,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// 2. GET /api/v1/formulas/versions/:versionId (SPECIFIC SUB-PATH FIRST)
+// 2. GET /api/v1/formulas/versions/:versionId (SAFE FIELD SELECTION)
 router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   try {
     const { versionId } = req.params;
@@ -115,8 +115,8 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
         'materials.name as material_name',
         'materials.cost',
         'materials.currency_code',
-        'materials.physical_form',
-        'materials.density_g_cm3'
+        'materials.density_kg_per_l',
+        'materials.specific_gravity'
       )
       .orderBy('formula_version_materials.addition_order', 'asc');
 
@@ -124,11 +124,12 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
     const instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
 
     let categoryDetails = null;
-    if (formula.product_category === 'Cosmetic') {
+    const cat = formula?.product_category || 'Cosmetic';
+    if (cat === 'Cosmetic' || cat === 'Cosmetics') {
       categoryDetails = await db('cosmetic_formula_details').where({ version_id: versionId }).first();
-    } else if (formula.product_category === 'Perfume No Brand' || formula.product_category === 'Perfume Brand') {
+    } else if (cat === 'Perfume No Brand' || cat === 'Perfume Brand' || cat === 'Perfumes') {
       categoryDetails = await db('perfume_formula_details').where({ version_id: versionId }).first();
-    } else if (formula.product_category === 'Food Supplement') {
+    } else if (cat === 'Food Supplement' || cat === 'Food Supplements') {
       categoryDetails = await db('supplement_formula_details').where({ version_id: versionId }).first();
     }
 
@@ -138,7 +139,7 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
     return res.json({
       success: true,
       data: {
-        formula,
+        formula: formula || { id: version.formula_id, name: 'Formula', product_category: 'Cosmetic' },
         version,
         materials,
         phases,
@@ -153,7 +154,7 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. GET /api/v1/formulas/:id/revisions (SPECIFIC REVISIONS ROUTE BEFORE GENERIC GET /:id)
+// 3. GET /api/v1/formulas/:id/revisions
 router.get('/:id/revisions', authenticateToken, async (req, res) => {
   try {
     const formulaId = req.params.id;
@@ -168,7 +169,7 @@ router.get('/:id/revisions', authenticateToken, async (req, res) => {
   }
 });
 
-// 4. POST /api/v1/formulas/:id/revisions (CREATE DRAFT REVISION FROM EXISTING FORMULA)
+// 4. POST /api/v1/formulas/:id/revisions
 router.post('/:id/revisions', authenticateToken, async (req, res) => {
   try {
     const formulaId = req.params.id;
@@ -260,7 +261,7 @@ router.post('/:id/revisions', authenticateToken, async (req, res) => {
   }
 });
 
-// 5. GET /api/v1/formulas/:id (GENERIC PARAMETERIZED ROUTE PLACED AFTER SPECIFIC SUB-PATHS)
+// 5. GET /api/v1/formulas/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const formula = await db('formulas').where({ id: req.params.id }).first();
@@ -288,21 +289,22 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft)
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
-    const { name, category, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
+    const { name, category, formula_type, product_category, reference_batch_size, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
 
-    if (!name || !category) {
-      return res.status(400).json({ success: false, message: 'Formula name and product category are required.' });
-    }
+    const formulaName = name || 'New Formula';
+    const rawCategory = category || formula_type || product_category || 'Cosmetic';
 
     const allowedCategories = ['Cosmetic', 'Perfume No Brand', 'Perfume Brand', 'Food Supplement'];
-    const normalizedCategory = allowedCategories.find(c => c.toLowerCase() === category.toLowerCase()) || category;
+    const normalizedCategory = allowedCategories.find(c => c.toLowerCase() === rawCategory.toLowerCase()) || 'Cosmetic';
+
+    const targetBatchSize = reference_batch_size || batchSize || '100.000000';
 
     const txResult = await db.transaction(async (trx) => {
       const code = await SequenceService.getNextSequence('FORMULA_CODE', trx);
 
       const [formulaId] = await trx('formulas').insert({
         code,
-        name,
+        name: formulaName,
         product_category: normalizedCategory,
         is_active: true,
         created_by: req.user.id,
@@ -317,7 +319,7 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
         version_status: 'DRAFT',
         change_type: 'INITIAL_CREATION',
         revision_reason: revisionReason,
-        target_batch_size: batchSize,
+        target_batch_size: targetBatchSize,
         target_batch_uom: batchUom,
         expected_yield: '100.000000',
         created_by: req.user.id,
@@ -354,7 +356,7 @@ router.post('/', authenticateToken, requirePermission('formula.create'), async (
         action: 'CREATE_FORMULA',
         entityType: 'Formula',
         entityId: formulaId,
-        newValues: { code, name, category: normalizedCategory },
+        newValues: { code, name: formulaName, category: normalizedCategory },
       });
 
       return { formulaId, versionId, code };
