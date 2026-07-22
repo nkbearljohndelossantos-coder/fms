@@ -1,202 +1,211 @@
-import { express } from '../cjsRequire.js';
-import Decimal from 'decimal.js';
+import express from 'express';
 import crypto from 'crypto';
+import Decimal from 'decimal.js';
 import db from '../db.js';
-import { authenticateToken, requireRoles, requirePermission } from '../middleware/auth.js';
+import { authenticateToken, requirePermission, requireRoles } from '../middleware/auth.js';
 import { AuditService } from '../services/AuditService.js';
 import { SequenceService } from '../services/SequenceService.js';
-import { validateFormulaPercentage, assertVersionIsMutable, validateWorkflowTransition } from '../services/validationEngine.js';
-import { calculateSupplementDosage } from '../services/supplementEngine.js';
-import { calculateFormulaCosting, saveFormulaCostSnapshot } from '../services/formulaCostingService.js';
+import { validateFormulaPercentage, assertVersionIsMutable } from '../services/validationEngine.js';
 
 const router = express.Router();
 
-// GET /api/v1/formulas - List Formulas
+function calculateFormulaCosting(materials, targetBatchSize = '100.000000') {
+  let totalCost = new Decimal(0);
+  const batchSizeDec = new Decimal(targetBatchSize);
+
+  const lineCosts = materials.map(m => {
+    const pctDec = new Decimal(m.percentage || '0');
+    const costPerKg = new Decimal(m.cost || '0');
+    const reqWeight = pctDec.div(100).times(batchSizeDec);
+    const lineCost = reqWeight.times(costPerKg);
+
+    totalCost = totalCost.plus(lineCost);
+    return {
+      materialId: m.material_id,
+      percentage: pctDec.toFixed(6),
+      requiredWeight: reqWeight.toFixed(6),
+      costPerKg: costPerKg.toFixed(6),
+      lineCost: lineCost.toFixed(6),
+    };
+  });
+
+  const costPerKg = batchSizeDec.gt(0) ? totalCost.div(batchSizeDec) : new Decimal(0);
+
+  return {
+    totalBatchCost: totalCost.toFixed(6),
+    costPerKg: costPerKg.toFixed(6),
+    lineCosts,
+  };
+}
+
+async function saveFormulaCostSnapshot(trx, versionId, costingResult) {
+  await trx('formula_cost_snapshots').insert({
+    version_id: versionId,
+    snapshot_data: JSON.stringify(costingResult),
+    total_cost: costingResult.totalBatchCost,
+    unit_cost: costingResult.costPerKg,
+  });
+}
+
+// GET /api/v1/formulas
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { category, search, status } = req.query;
 
-    const query = db('formulas')
-      .leftJoin('users', 'formulas.owner_id', 'users.id')
-      .select('formulas.*', 'users.first_name as owner_first_name', 'users.last_name as owner_last_name');
+    let query = db('formulas').select('*').orderBy('id', 'desc');
 
     if (category) {
-      query.andWhere('formulas.product_category', category);
-    }
-    if (status) {
-      query.andWhere('formulas.status', status);
+      query = query.where({ product_category: category });
     }
     if (search) {
-      query.andWhere(b => {
-        b.where('formulas.name', 'like', `%${search}%`)
-         .orWhere('formulas.code', 'like', `%${search}%`);
+      query = query.where(builder => {
+        builder.where('code', 'like', `%${search}%`).orWhere('name', 'like', `%${search}%`);
       });
     }
 
-    const formulas = await query.orderBy('formulas.updated_at', 'desc');
+    const formulas = await query;
 
-    for (const f of formulas) {
-      const versions = await db('formula_versions')
-        .where({ formula_id: f.id })
-        .select('id', 'major_version', 'minor_version', 'version_status', 'created_at', 'effective_date')
-        .orderBy('created_at', 'desc');
+    const formulaIds = formulas.map(f => f.id);
+    const versions = await db('formula_versions')
+      .whereIn('formula_id', formulaIds.length ? formulaIds : [0])
+      .orderBy('major_version', 'desc')
+      .orderBy('minor_version', 'desc');
 
-      f.versions = versions;
-      f.latest_version = versions[0] || null;
-      f.approved_version = versions.find(v => v.version_status === 'APPROVED') || null;
-    }
+    const result = formulas.map(f => {
+      const fVersions = versions.filter(v => v.formula_id === f.id);
+      const activeVer = fVersions.find(v => v.version_status === 'APPROVED') || fVersions[0] || null;
+      return {
+        ...f,
+        active_version: activeVer ? `${activeVer.major_version}.${activeVer.minor_version}` : '1.0',
+        active_version_id: activeVer?.id || null,
+        versions: fVersions.map(v => ({
+          id: v.id,
+          version: `${v.major_version}.${v.minor_version}`,
+          version_status: v.version_status,
+          target_batch_size: v.target_batch_size,
+          created_at: v.created_at,
+        })),
+      };
+    });
 
-    return res.json({ success: true, data: formulas });
+    return res.json({ success: true, data: result });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch formulas.', error: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch formulas', error: err.message });
   }
 });
 
-// GET /api/v1/formulas/versions/:versionId - Get Full Version Detail
-router.get('/versions/:versionId', authenticateToken, async (req, res) => {
+// GET /api/v1/formulas/:id
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const { versionId } = req.params;
-
-    const version = await db('formula_versions')
-      .join('formulas', 'formula_versions.formula_id', 'formulas.id')
-      .leftJoin('users as c', 'formula_versions.created_by', 'c.id')
-      .leftJoin('users as r', 'formula_versions.reviewed_by', 'r.id')
-      .leftJoin('users as a', 'formula_versions.approved_by', 'a.id')
-      .where('formula_versions.id', versionId)
-      .select(
-        'formula_versions.*',
-        'formulas.code as formula_code',
-        'formulas.name as formula_name',
-        'formulas.product_category',
-        'formulas.product_subcategory',
-        'formulas.brand_type',
-        'formulas.status as formula_status',
-        'formulas.department',
-        'c.username as created_by_name',
-        'r.username as reviewed_by_name',
-        'a.username as approved_by_name'
-      )
-      .first();
-
-    if (!version) {
-      return res.status(404).json({ success: false, message: 'Formula version not found.' });
+    const formula = await db('formulas').where({ id: req.params.id }).first();
+    if (!formula) {
+      return res.status(404).json({ success: false, message: 'Formula not found' });
     }
 
-    const phases = await db('formula_phases').where({ version_id: versionId }).orderBy('phase_order', 'asc');
-
-    const materials = await db('formula_version_materials')
-      .leftJoin('materials', 'formula_version_materials.material_id', 'materials.id')
-      .leftJoin('supplement_serving_details', 'formula_version_materials.id', 'supplement_serving_details.version_material_id')
-      .where('formula_version_materials.version_id', versionId)
-      .select(
-        'formula_version_materials.*',
-        'materials.cost as current_material_cost',
-        'materials.currency_code as current_material_currency',
-        'materials.density_kg_per_l',
-        'materials.specific_gravity',
-        'supplement_serving_details.active_amount_per_serving',
-        'supplement_serving_details.active_uom',
-        'supplement_serving_details.overage_pct',
-        'supplement_serving_details.is_excipient',
-        'supplement_serving_details.is_fixed_non_active'
-      )
-      .orderBy('formula_version_materials.addition_order', 'asc');
-
-    const instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
-
-    let categoryDetails = null;
-    if (version.product_category === 'Cosmetic') {
-      categoryDetails = await db('cosmetic_formula_details').where({ version_id: versionId }).first();
-    } else if (version.product_category === 'Perfume No Brand' || version.product_category === 'Perfume Brand') {
-      categoryDetails = await db('perfume_formula_details').where({ version_id: versionId }).first();
-    } else if (version.product_category === 'Food Supplement') {
-      categoryDetails = await db('supplement_formula_details').where({ version_id: versionId }).first();
-    }
-
-    const costSnapshot = await db('formula_cost_snapshots').where({ version_id: versionId }).first();
-    let snapshotItems = [];
-    if (costSnapshot) {
-      snapshotItems = await db('formula_cost_snapshot_items').where({ snapshot_id: costSnapshot.id });
-    }
-
-    const workflowHistory = await db('formula_workflow_records')
-      .leftJoin('users', 'formula_workflow_records.actor_id', 'users.id')
-      .where('formula_workflow_records.version_id', versionId)
-      .select('formula_workflow_records.*', 'users.first_name', 'users.last_name', 'users.username')
-      .orderBy('formula_workflow_records.created_at', 'desc');
+    const versions = await db('formula_versions')
+      .where({ formula_id: formula.id })
+      .orderBy('major_version', 'desc')
+      .orderBy('minor_version', 'desc');
 
     return res.json({
       success: true,
       data: {
-        version,
-        phases,
-        materials,
-        instructions,
-        categoryDetails,
-        costSnapshot,
-        snapshotItems,
-        workflowHistory,
+        ...formula,
+        versions,
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to fetch version detail.', error: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch formula details', error: err.message });
   }
 });
 
-// POST /api/v1/formulas - Create new Formula master & initial v1.0 draft
+// GET /api/v1/formulas/versions/:versionId
+router.get('/versions/:versionId', authenticateToken, async (req, res) => {
+  try {
+    const { versionId } = req.params;
+
+    const version = await db('formula_versions').where({ id: versionId }).first();
+    if (!version) {
+      return res.status(404).json({ success: false, message: 'Formula version not found' });
+    }
+
+    const formula = await db('formulas').where({ id: version.formula_id }).first();
+
+    const materials = await db('formula_version_materials')
+      .leftJoin('materials', 'formula_version_materials.material_id', 'materials.id')
+      .where({ version_id: versionId })
+      .select(
+        'formula_version_materials.*',
+        'materials.code as material_code',
+        'materials.name as material_name',
+        'materials.cost',
+        'materials.currency_code',
+        'materials.physical_form',
+        'materials.density_g_cm3'
+      )
+      .orderBy('formula_version_materials.addition_order', 'asc');
+
+    const phases = await db('formula_phases').where({ version_id: versionId }).orderBy('phase_order', 'asc');
+    const instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
+
+    let categoryDetails = null;
+    if (formula.product_category === 'Cosmetic') {
+      categoryDetails = await db('cosmetic_formula_details').where({ version_id: versionId }).first();
+    } else if (formula.product_category === 'Perfume No Brand' || formula.product_category === 'Perfume Brand') {
+      categoryDetails = await db('perfume_formula_details').where({ version_id: versionId }).first();
+    } else if (formula.product_category === 'Food Supplement') {
+      categoryDetails = await db('supplement_formula_details').where({ version_id: versionId }).first();
+    }
+
+    const costing = calculateFormulaCosting(materials, version.target_batch_size);
+    const valResult = validateFormulaPercentage(materials);
+
+    return res.json({
+      success: true,
+      data: {
+        formula,
+        version,
+        materials,
+        phases,
+        instructions,
+        categoryDetails,
+        costing,
+        validation: valResult,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch formula version', error: err.message });
+  }
+});
+
+// POST /api/v1/formulas (Create master formula & initial v1.0 draft)
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
-    const rawName = req.body.name || req.body.formula_name;
-    const rawType = req.body.formula_type || req.body.formulaType || req.body.productCategory || req.body.product_category;
-    const productSubcategory = req.body.productSubcategory || req.body.product_subcategory || null;
-    const brandType = req.body.brandType || req.body.brand_type || null;
-    const rawBatchSize = req.body.targetBatchSize ?? req.body.target_batch_size ?? req.body.referenceBatchSize ?? req.body.reference_batch_size;
-    const batchUom = req.body.targetBatchUom || req.body.target_batch_uom || req.body.referenceBatchUom || req.body.reference_batch_uom || 'kg';
-    const revisionReason = req.body.revisionReason || req.body.revision_reason || 'Initial formula creation';
+    const { name, category, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
 
-    if (!rawName || typeof rawName !== 'string' || !rawName.trim()) {
-      return res.status(400).json({ success: false, message: 'Formula name is required' });
+    if (!name || !category) {
+      return res.status(400).json({ success: false, message: 'Formula name and product category are required.' });
     }
-    const name = rawName.trim();
 
-    let normalizedCategory = null;
-    const typeUpper = String(rawType || '').toUpperCase();
-    if (typeUpper === 'COSMETIC' || rawType === 'Cosmetic') normalizedCategory = 'Cosmetic';
-    else if (typeUpper === 'PERFUME_NO_BRAND' || typeUpper === 'PERFUME - NO BRAND' || rawType === 'Perfume No Brand') normalizedCategory = 'Perfume No Brand';
-    else if (typeUpper === 'PERFUME_BRAND' || typeUpper === 'PERFUME - BRAND' || rawType === 'Perfume Brand') normalizedCategory = 'Perfume Brand';
-    else if (typeUpper === 'FOOD_SUPPLEMENT' || typeUpper === 'FOOD SUPPLEMENT' || rawType === 'Food Supplement') normalizedCategory = 'Food Supplement';
-    else return res.status(400).json({ success: false, message: 'Invalid formula type' });
-
-    let batchSize = '1.000000';
-    if (rawBatchSize !== undefined && rawBatchSize !== null && rawBatchSize !== '') {
-      const numSize = Number(rawBatchSize);
-      if (isNaN(numSize) || numSize <= 0) {
-        return res.status(400).json({ success: false, message: 'Reference batch size must be greater than zero' });
-      }
-      batchSize = new Decimal(numSize).toFixed(6);
-    }
+    const allowedCategories = ['Cosmetic', 'Perfume No Brand', 'Perfume Brand', 'Food Supplement'];
+    const normalizedCategory = allowedCategories.find(c => c.toLowerCase() === category.toLowerCase()) || category;
 
     const txResult = await db.transaction(async (trx) => {
-      // Atomic Sequence Code Generator
       const code = await SequenceService.getNextSequence('FORMULA_CODE', trx);
 
-      const insertFormula = {
+      const [formulaId] = await trx('formulas').insert({
         code,
         name,
         product_category: normalizedCategory,
-        product_subcategory: productSubcategory,
-        brand_type: brandType,
-        status: 'ACTIVE',
-        owner_id: req.user.id,
-      };
-
-      const [formulaId] = await trx('formulas').insert(insertFormula).then(res => [res[0]]);
+        is_active: true,
+        created_by: req.user.id,
+      }).then(res => [res[0]]);
 
       const insertVersion = {
         formula_id: formulaId,
-        parent_version_id: null,
         major_version: 1,
         minor_version: 0,
+        version_code: 'V1.0',
         lock_version: 0,
         version_status: 'DRAFT',
         change_type: 'INITIAL_CREATION',
@@ -273,7 +282,6 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
       return res.status(404).json({ success: false, message: 'Formula version not found.' });
     }
 
-    // Read-only check: Approved and locked formula versions are immutable
     if ((version.version_status === 'APPROVED' || version.version_status === 'LOCKED') && action !== 'REJECT') {
       return res.status(422).json({
         success: false,
@@ -304,7 +312,7 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
 
       const submitRecord = await db('formula_workflow_records')
         .where({ version_id: versionId, action: 'SUBMIT' })
-        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
         .first();
 
       if (submitRecord && Number(submitRecord.actor_id) === Number(req.user.id)) {
@@ -321,7 +329,6 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
       .where({ version_id: versionId })
       .select('formula_version_materials.*', 'materials.cost', 'materials.currency_code');
 
-    // Composition 100% total validation
     if (targetStatus === 'UNDER_REVIEW' || targetStatus === 'FOR_APPROVAL' || targetStatus === 'APPROVED') {
       const valResult = validateFormulaPercentage(materials, '0.010000');
       if (!valResult.isValid) {
@@ -404,10 +411,8 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
     const instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
 
     const result = await db.transaction(async (trx) => {
-      // 1. Concurrency-safe Batch Number
       const batchNumber = await SequenceService.getNextSequence('BATCH_NUMBER', trx);
 
-      // 2. Compute canonical snapshot hash
       const snapshotPayload = JSON.stringify({
         formulaCode: formula.code,
         version: `${version.major_version}.${version.minor_version}`,
@@ -417,7 +422,6 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
       });
       const snapshotHash = crypto.createHash('sha256').update(snapshotPayload).digest('hex');
 
-      // 3. Create production_batches master
       const [batchId] = await trx('production_batches').insert({
         batch_number: batchNumber,
         formula_id: formula.id,
@@ -432,7 +436,6 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
         created_by: req.user.id,
       }).then(r => [r[0]]);
 
-      // 4. Create batch_phases
       const phaseIdMap = {};
       for (const p of phases) {
         const [bpId] = await trx('batch_phases').insert({
@@ -445,47 +448,44 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
         phaseIdMap[p.id] = bpId;
       }
 
-      // 5. Create batch_steps & batch_material_requirements (Planned Snapshot)
       for (let i = 0; i < instructions.length; i++) {
         const inst = instructions[i];
-        const [stepId] = await trx('batch_steps').insert({
+        const bpId = phaseIdMap[inst.phase_id] || (Object.values(phaseIdMap)[0] || null);
+
+        const [bsId] = await trx('batch_steps').insert({
           batch_id: batchId,
-          phase_id: inst.phase_id ? phaseIdMap[inst.phase_id] : (Object.values(phaseIdMap)[0] || 1),
-          step_number: i + 1,
-          material_id: null,
+          batch_phase_id: bpId,
+          step_number: inst.step_number || (i + 1),
           instructions: inst.instruction_text,
           status: 'Pending',
           lock_version: 1,
         }).then(r => [r[0]]);
 
-        // Find associated material for this step if any
-        const m = materials[i];
-        if (m) {
-          const pctDec = new Decimal(m.percentage);
-          const targetWtDec = pctDec.div(100).times(batchSizeDec);
-          const tolDec = new Decimal('1.000000'); // 1% tolerance
-          const minWtDec = targetWtDec.times(new Decimal(1).minus(tolDec.div(100)));
-          const maxWtDec = targetWtDec.times(new Decimal(1).plus(tolDec.div(100)));
+        const mat = materials.find(m => m.id === inst.material_id) || materials[i];
+        if (mat) {
+          const pctDec = new Decimal(mat.percentage || '0');
+          const targetWeightDec = pctDec.div(100).times(batchSizeDec);
+          const tolPctDec = new Decimal(mat.tolerance_percent || '1.000000');
+          const tolWeight = targetWeightDec.times(tolPctDec.div(100));
 
           await trx('batch_material_requirements').insert({
             batch_id: batchId,
-            step_id: stepId,
-            material_id: m.material_id,
-            material_code: m.material_code_snapshot,
-            material_name: m.material_name_snapshot,
+            step_id: bsId,
+            material_id: mat.material_id,
+            material_code: mat.material_code_snapshot,
+            material_name: mat.material_name_snapshot,
             percentage: pctDec.toFixed(6),
-            target_weight: targetWtDec.toFixed(6),
-            tolerance_percent: tolDec.toFixed(6),
-            min_weight: minWtDec.toFixed(6),
-            max_weight: maxWtDec.toFixed(6),
+            target_weight: targetWeightDec.toFixed(6),
+            tolerance_percent: tolPctDec.toFixed(6),
+            min_weight: targetWeightDec.minus(tolWeight).toFixed(6),
+            max_weight: targetWeightDec.plus(tolWeight).toFixed(6),
           });
         }
       }
 
-      // 6. Tokenized QR code
       const rawQrToken = crypto.randomBytes(32).toString('hex');
       const qrHash = crypto.createHash('sha256').update(rawQrToken).digest('hex');
-      const qrExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      const qrExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       await trx('qr_tokens').insert({
         token_hash: qrHash,
@@ -495,7 +495,6 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
         expires_at: qrExpiresAt,
       });
 
-      // 7. Audit log in same transaction
       await AuditService.logEvent({
         trx,
         userId: req.user.id,
@@ -524,6 +523,113 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Batch creation failed', error: err.message });
+  }
+});
+
+// GET /api/v1/formulas/:id/revisions (List formula versions / revisions)
+router.get('/:id/revisions', authenticateToken, async (req, res) => {
+  try {
+    const formulaId = req.params.id;
+    const versions = await db('formula_versions')
+      .where({ formula_id: formulaId })
+      .orderBy('major_version', 'desc')
+      .orderBy('minor_version', 'desc');
+
+    return res.json({ success: true, data: versions });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch revisions', error: err.message });
+  }
+});
+
+// POST /api/v1/formulas/:id/revisions (Create new draft version revision from existing formula)
+router.post('/:id/revisions', authenticateToken, async (req, res) => {
+  try {
+    const formulaId = req.params.id;
+    const { revisionReason, parentVersionId } = req.body;
+
+    const formula = await db('formulas').where({ id: formulaId }).first();
+    if (!formula) {
+      return res.status(404).json({ success: false, message: 'Formula not found.' });
+    }
+
+    const sourceVersionId = parentVersionId || (
+      await db('formula_versions')
+        .where({ formula_id: formulaId })
+        .orderBy('major_version', 'desc')
+        .orderBy('minor_version', 'desc')
+        .first()
+    )?.id;
+
+    const parentVer = sourceVersionId ? await db('formula_versions').where({ id: sourceVersionId }).first() : null;
+
+    const nextMajor = (parentVer?.major_version || 1) + 1;
+    const nextMinor = 0;
+
+    const result = await db.transaction(async (trx) => {
+      const insertVer = {
+        formula_id: formulaId,
+        major_version: nextMajor,
+        minor_version: nextMinor,
+        version_code: `V${nextMajor}.${nextMinor}`,
+        lock_version: 0,
+        version_status: 'DRAFT',
+        change_type: 'REVISION',
+        revision_reason: revisionReason || `Draft revision from Version ${parentVer?.major_version || 1}.${parentVer?.minor_version || 0}`,
+        target_batch_size: parentVer?.target_batch_size || '100.000000',
+        target_batch_uom: parentVer?.target_batch_uom || 'kg',
+        expected_yield: '100.000000',
+        created_by: req.user.id,
+      };
+
+      const [newVersionId] = await trx('formula_versions').insert(insertVer).then(r => [r[0]]);
+
+      if (sourceVersionId) {
+        const oldMats = await trx('formula_version_materials').where({ version_id: sourceVersionId });
+        for (const m of oldMats) {
+          await trx('formula_version_materials').insert({
+            version_id: newVersionId,
+            material_id: m.material_id,
+            material_code_snapshot: m.material_code_snapshot,
+            material_name_snapshot: m.material_name_snapshot,
+            percentage: m.percentage,
+            phase_name: m.phase_name,
+            addition_order: m.addition_order,
+            mixing_speed_rpm: m.mixing_speed_rpm,
+            temperature_celsius: m.temperature_celsius,
+            mixing_time_minutes: m.mixing_time_minutes,
+            tolerance_percent: m.tolerance_percent,
+            quality_grade_required: m.quality_grade_required,
+            notes: m.notes,
+          });
+        }
+      }
+
+      await AuditService.logEvent({
+        trx,
+        userId: req.user.id,
+        userRole: req.user.roles[0] || 'Chemist',
+        action: 'CREATE_REVISION',
+        entityType: 'FormulaVersion',
+        entityId: newVersionId,
+        newValues: { formula_id: formulaId, version: `V${nextMajor}.${nextMinor}` },
+      });
+
+      return { newVersionId, version: `V${nextMajor}.${nextMinor}` };
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'New draft revision created successfully.',
+      data: {
+        formula_id: String(formulaId),
+        version_id: String(result.newVersionId),
+        version: result.version,
+        version_status: 'DRAFT',
+      },
+      versionId: result.newVersionId,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to create formula revision.', error: err.message });
   }
 });
 
