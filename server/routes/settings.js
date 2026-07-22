@@ -43,4 +43,56 @@ router.put('/', authenticateToken, requireRoles('Super Admin'), async (req, res)
   }
 });
 
+// POST /api/v1/settings/reset - Dangerous Database Reset (Super Admin Only)
+router.post('/reset', authenticateToken, requireRoles('Super Admin'), async (req, res) => {
+  try {
+    const { confirmation } = req.body;
+    if (confirmation !== 'RESET_ALL_DATA') {
+      return res.status(400).json({ success: false, message: 'Invalid confirmation code. Please type RESET_ALL_DATA.' });
+    }
+
+    await db.raw('SET FOREIGN_KEY_CHECKS = 0');
+
+    const tables = [
+      'production_batches',
+      'batch_phases',
+      'batch_steps',
+      'batch_material_requirements',
+      'batch_material_entries',
+      'batch_assignments',
+      'batch_execution_locks',
+      'electronic_signatures',
+      'qr_tokens',
+      'formula_workflow_records',
+      'formula_cost_snapshots',
+      'formula_cost_snapshot_items',
+      'formula_version_materials',
+      'formula_instructions',
+      'formula_phases',
+      'cosmetic_formula_details',
+      'perfume_formula_details',
+      'supplement_formula_details',
+      'formula_versions',
+      'formulas',
+      'material_cost_history',
+      'materials',
+      'audit_logs'
+    ];
+
+    for (const table of tables) {
+      await db(table).truncate();
+    }
+
+    await db.raw('SET FOREIGN_KEY_CHECKS = 1');
+
+    return res.json({ success: true, message: 'Database reset completed. All formulation, materials, and batch records have been permanently cleared.' });
+  } catch (err) {
+    console.error('Database reset failed:', err);
+    try {
+      await db.raw('SET FOREIGN_KEY_CHECKS = 1');
+    } catch (_) {}
+    return res.status(500).json({ success: false, message: 'Failed to reset database.', error: err.message });
+  }
+});
+
 export default router;
