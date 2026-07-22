@@ -203,7 +203,7 @@ export async function seed(knex) {
     }
   }
 
-  // 7. Seed Production Batches & QC Inspections (Cosmetics Focus Only)
+  // 7. Seed Production Batches & QC Inspections (Grams Batch Target)
   await knex('qc_inspections').del();
   await knex('batch_material_requirements').del();
   await knex('batch_steps').del();
@@ -215,7 +215,7 @@ export async function seed(knex) {
   const mx01Machine = await knex('machines').where({ code: 'MX-01' }).first();
 
   if (fCosmetic && vCosmetic) {
-    // Batch 1: Cosmetic (In Progress)
+    // Batch 1: Cosmetic (In Progress, Target: 500 grams)
     const [bId1] = await knex('production_batches').insert({
       batch_number: 'BAT-2026-0101',
       formula_id: fCosmetic.id,
@@ -309,5 +309,5 @@ export async function seed(knex) {
     });
   }
 
-  console.log('✅ Enterprise MES Seed completed (Cosmetics Focus Only)!');
+  console.log('✅ Enterprise MES Seed completed (Grams UOM & Cosmetics Focus)!');
 }

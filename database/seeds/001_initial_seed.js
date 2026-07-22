@@ -116,14 +116,14 @@ export async function seed(knex) {
     { key: 'formula_tolerance_pct', value: '0.01', description: 'Tolerance for 100% total formula validation' },
   ]);
 
-  // 5. Seed Cosmetic Raw Materials
+  // 5. Seed Cosmetic Raw Materials (Default UOM: g)
   const rawMaterials = [
-    { code: 'MAT-WTR-001', name: 'Deionized Water', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '12.500000', currency_code: 'PHP', density_kg_per_l: '1.000000', specific_gravity: '1.000000', description: 'Pure deionized water', is_inventoried: true },
-    { code: 'MAT-GLY-002', name: 'Glycerin USP', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '185.000000', currency_code: 'PHP', density_kg_per_l: '1.261000', specific_gravity: '1.261000', description: 'Humectant and skin protectant', is_inventoried: true },
-    { code: 'MAT-SLES-003', name: 'Sodium Lauryl Ether Sulfate (SLES 70%)', company_id: c2, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '240.000000', currency_code: 'PHP', density_kg_per_l: '1.050000', specific_gravity: '1.050000', description: 'Primary anionic surfactant', is_inventoried: true },
-    { code: 'MAT-CAPB-004', name: 'Cocamidopropyl Betaine (CAPB)', company_id: c2, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '210.000000', currency_code: 'PHP', density_kg_per_l: '1.040000', specific_gravity: '1.040000', description: 'Amphoteric secondary surfactant', is_inventoried: true },
-    { code: 'MAT-NIAC-005', name: 'Niacinamide (Vitamin B3)', company_id: c1, vendor_id: v3, uom: 'kg', uom_category: 'MASS', cost: '1850.000000', currency_code: 'PHP', density_kg_per_l: '1.200000', specific_gravity: '1.200000', description: 'Brightening active ingredient', is_inventoried: false },
-    { code: 'MAT-PHENOX-006', name: 'Phenoxyethanol Preservative', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '650.000000', currency_code: 'PHP', density_kg_per_l: '1.107000', specific_gravity: '1.107000', description: 'Broad-spectrum preservative', is_inventoried: true },
+    { code: 'MAT-WTR-001', name: 'Deionized Water', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.012500', currency_code: 'PHP', density_kg_per_l: '1.000000', specific_gravity: '1.000000', description: 'Pure deionized water', is_inventoried: true },
+    { code: 'MAT-GLY-002', name: 'Glycerin USP', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.185000', currency_code: 'PHP', density_kg_per_l: '1.261000', specific_gravity: '1.261000', description: 'Humectant and skin protectant', is_inventoried: true },
+    { code: 'MAT-SLES-003', name: 'Sodium Lauryl Ether Sulfate (SLES 70%)', company_id: c2, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.240000', currency_code: 'PHP', density_kg_per_l: '1.050000', specific_gravity: '1.050000', description: 'Primary anionic surfactant', is_inventoried: true },
+    { code: 'MAT-CAPB-004', name: 'Cocamidopropyl Betaine (CAPB)', company_id: c2, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.210000', currency_code: 'PHP', density_kg_per_l: '1.040000', specific_gravity: '1.040000', description: 'Amphoteric secondary surfactant', is_inventoried: true },
+    { code: 'MAT-NIAC-005', name: 'Niacinamide (Vitamin B3)', company_id: c1, vendor_id: v3, uom: 'g', uom_category: 'MASS', cost: '1.850000', currency_code: 'PHP', density_kg_per_l: '1.200000', specific_gravity: '1.200000', description: 'Brightening active ingredient', is_inventoried: false },
+    { code: 'MAT-PHENOX-006', name: 'Phenoxyethanol Preservative', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.650000', currency_code: 'PHP', density_kg_per_l: '1.107000', specific_gravity: '1.107000', description: 'Broad-spectrum preservative', is_inventoried: true },
   ];
 
   const materialMap = {};
@@ -132,7 +132,7 @@ export async function seed(knex) {
     materialMap[m.code] = id;
   }
 
-  // 6. Seed Cosmetic Formula 1
+  // 6. Seed Cosmetic Formula 1 (Target UOM: g)
   const [f1Id] = await knex('formulas').insert({
     code: 'F-COS-001',
     name: 'Gentle Hydrating Facial Cleanser',
@@ -153,8 +153,8 @@ export async function seed(knex) {
     change_type: 'INITIAL_RELEASE',
     revision_reason: 'Initial approved formula launch',
     change_summary: 'Baseline gentle cleanser formulation',
-    target_batch_size: '100.000000',
-    target_batch_uom: 'kg',
+    target_batch_size: '500.000000',
+    target_batch_uom: 'g',
     expected_yield: '99.500000',
     shelf_life: '24 Months',
     storage_condition: 'Store in cool dry place below 30°C',
@@ -170,12 +170,12 @@ export async function seed(knex) {
   const [phaseC1] = await knex('formula_phases').insert({ version_id: v1Id, phase_name: 'Cooling Phase', phase_order: 3 }).then(res => [res[0] || 3]);
 
   const f1Materials = [
-    { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-WTR-001'], material_code_snapshot: 'MAT-WTR-001', material_name_snapshot: 'Deionized Water', uom_snapshot: 'kg', percentage: '65.000000', calculated_quantity: '65.000000', addition_order: 1, temp_c: 75, mixing_speed_rpm: 300, duration_min: 15, line_cost: '812.500000', function_name: 'Solvent Base' },
-    { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-GLY-002'], material_code_snapshot: 'MAT-GLY-002', material_name_snapshot: 'Glycerin USP', uom_snapshot: 'kg', percentage: '5.000000', calculated_quantity: '5.000000', addition_order: 2, temp_c: 75, mixing_speed_rpm: 400, duration_min: 10, line_cost: '925.000000', function_name: 'Humectant' },
-    { version_id: v1Id, phase_id: phaseB1, material_id: materialMap['MAT-SLES-003'], material_code_snapshot: 'MAT-SLES-003', material_name_snapshot: 'Sodium Lauryl Ether Sulfate (SLES 70%)', uom_snapshot: 'kg', percentage: '18.000000', calculated_quantity: '18.000000', addition_order: 3, temp_c: 60, mixing_speed_rpm: 600, duration_min: 25, line_cost: '4320.000000', function_name: 'Primary Surfactant' },
-    { version_id: v1Id, phase_id: phaseB1, material_id: materialMap['MAT-CAPB-004'], material_code_snapshot: 'MAT-CAPB-004', material_name_snapshot: 'Cocamidopropyl Betaine (CAPB)', uom_snapshot: 'kg', percentage: '9.500000', calculated_quantity: '9.500000', addition_order: 4, temp_c: 50, mixing_speed_rpm: 500, duration_min: 20, line_cost: '1995.000000', function_name: 'Co-Surfactant' },
-    { version_id: v1Id, phase_id: phaseC1, material_id: materialMap['MAT-NIAC-005'], material_code_snapshot: 'MAT-NIAC-005', material_name_snapshot: 'Niacinamide (Vitamin B3)', uom_snapshot: 'kg', percentage: '1.500000', calculated_quantity: '1.500000', addition_order: 5, temp_c: 40, mixing_speed_rpm: 400, duration_min: 15, line_cost: '2775.000000', function_name: 'Skin Brightening Active' },
-    { version_id: v1Id, phase_id: phaseC1, material_id: materialMap['MAT-PHENOX-006'], material_code_snapshot: 'MAT-PHENOX-006', material_name_snapshot: 'Phenoxyethanol Preservative', uom_snapshot: 'kg', percentage: '1.000000', calculated_quantity: '1.000000', addition_order: 6, temp_c: 35, mixing_speed_rpm: 350, duration_min: 10, line_cost: '650.000000', function_name: 'Preservative' },
+    { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-WTR-001'], material_code_snapshot: 'MAT-WTR-001', material_name_snapshot: 'Deionized Water', uom_snapshot: 'g', percentage: '65.000000', calculated_quantity: '325.000000', addition_order: 1, temp_c: 75, mixing_speed_rpm: 300, duration_min: 15, line_cost: '4.062500', function_name: 'Solvent Base' },
+    { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-GLY-002'], material_code_snapshot: 'MAT-GLY-002', material_name_snapshot: 'Glycerin USP', uom_snapshot: 'g', percentage: '5.000000', calculated_quantity: '25.000000', addition_order: 2, temp_c: 75, mixing_speed_rpm: 400, duration_min: 10, line_cost: '4.625000', function_name: 'Humectant' },
+    { version_id: v1Id, phase_id: phaseB1, material_id: materialMap['MAT-SLES-003'], material_code_snapshot: 'MAT-SLES-003', material_name_snapshot: 'Sodium Lauryl Ether Sulfate (SLES 70%)', uom_snapshot: 'g', percentage: '18.000000', calculated_quantity: '90.000000', addition_order: 3, temp_c: 60, mixing_speed_rpm: 600, duration_min: 25, line_cost: '21.600000', function_name: 'Primary Surfactant' },
+    { version_id: v1Id, phase_id: phaseB1, material_id: materialMap['MAT-CAPB-004'], material_code_snapshot: 'MAT-CAPB-004', material_name_snapshot: 'Cocamidopropyl Betaine (CAPB)', uom_snapshot: 'g', percentage: '9.500000', calculated_quantity: '47.500000', addition_order: 4, temp_c: 50, mixing_speed_rpm: 500, duration_min: 20, line_cost: '9.975000', function_name: 'Co-Surfactant' },
+    { version_id: v1Id, phase_id: phaseC1, material_id: materialMap['MAT-NIAC-005'], material_code_snapshot: 'MAT-NIAC-005', material_name_snapshot: 'Niacinamide (Vitamin B3)', uom_snapshot: 'g', percentage: '1.500000', calculated_quantity: '7.500000', addition_order: 5, temp_c: 40, mixing_speed_rpm: 400, duration_min: 15, line_cost: '13.875000', function_name: 'Skin Brightening Active' },
+    { version_id: v1Id, phase_id: phaseC1, material_id: materialMap['MAT-PHENOX-006'], material_code_snapshot: 'MAT-PHENOX-006', material_name_snapshot: 'Phenoxyethanol Preservative', uom_snapshot: 'g', percentage: '1.000000', calculated_quantity: '5.000000', addition_order: 6, temp_c: 35, mixing_speed_rpm: 350, duration_min: 10, line_cost: '3.250000', function_name: 'Preservative' },
   ];
 
   for (const m of f1Materials) {
@@ -194,7 +194,7 @@ export async function seed(knex) {
     manufacturing_conditions: 'Standard stainless steel jacketed vessel with propeller mixer',
   });
 
-  // Seed Cosmetic Formula 2
+  // Seed Cosmetic Formula 2 (Target UOM: g)
   const [f2Id] = await knex('formulas').insert({
     code: 'F-COS-002',
     name: 'Niacinamide 10% Soothing Serum',
@@ -214,8 +214,8 @@ export async function seed(knex) {
     version_status: 'APPROVED',
     change_type: 'INITIAL_RELEASE',
     revision_reason: 'Soothing serum release',
-    target_batch_size: '50.000000',
-    target_batch_uom: 'kg',
+    target_batch_size: '100.000000',
+    target_batch_uom: 'g',
     created_by: formulatorUserId,
     reviewed_by: reviewerUserId,
     approved_by: approverUserId,
@@ -226,10 +226,10 @@ export async function seed(knex) {
   const [phaseA2] = await knex('formula_phases').insert({ version_id: v2Id, phase_name: 'Phase A - Water Phase', phase_order: 1 }).then(res => [res[0] || 4]);
 
   await knex('formula_version_materials').insert([
-    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-WTR-001'], material_code_snapshot: 'MAT-WTR-001', material_name_snapshot: 'Deionized Water', uom_snapshot: 'kg', percentage: '84.000000', calculated_quantity: '42.000000', addition_order: 1, line_cost: '525.000000', function_name: 'Solvent' },
-    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-NIAC-005'], material_code_snapshot: 'MAT-NIAC-005', material_name_snapshot: 'Niacinamide (Vitamin B3)', uom_snapshot: 'kg', percentage: '10.000000', calculated_quantity: '5.000000', addition_order: 2, line_cost: '9250.000000', function_name: 'Active' },
-    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-GLY-002'], material_code_snapshot: 'MAT-GLY-002', material_name_snapshot: 'Glycerin USP', uom_snapshot: 'kg', percentage: '5.000000', calculated_quantity: '2.500000', addition_order: 3, line_cost: '462.500000', function_name: 'Humectant' },
-    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-PHENOX-006'], material_code_snapshot: 'MAT-PHENOX-006', material_name_snapshot: 'Phenoxyethanol Preservative', uom_snapshot: 'kg', percentage: '1.000000', calculated_quantity: '0.500000', addition_order: 4, line_cost: '325.000000', function_name: 'Preservative' },
+    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-WTR-001'], material_code_snapshot: 'MAT-WTR-001', material_name_snapshot: 'Deionized Water', uom_snapshot: 'g', percentage: '84.000000', calculated_quantity: '84.000000', addition_order: 1, line_cost: '1.050000', function_name: 'Solvent' },
+    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-NIAC-005'], material_code_snapshot: 'MAT-NIAC-005', material_name_snapshot: 'Niacinamide (Vitamin B3)', uom_snapshot: 'g', percentage: '10.000000', calculated_quantity: '10.000000', addition_order: 2, line_cost: '18.500000', function_name: 'Active' },
+    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-GLY-002'], material_code_snapshot: 'MAT-GLY-002', material_name_snapshot: 'Glycerin USP', uom_snapshot: 'g', percentage: '5.000000', calculated_quantity: '5.000000', addition_order: 3, line_cost: '0.925000', function_name: 'Humectant' },
+    { version_id: v2Id, phase_id: phaseA2, material_id: materialMap['MAT-PHENOX-006'], material_code_snapshot: 'MAT-PHENOX-006', material_name_snapshot: 'Phenoxyethanol Preservative', uom_snapshot: 'g', percentage: '1.000000', calculated_quantity: '1.000000', addition_order: 4, line_cost: '0.650000', function_name: 'Preservative' },
   ]);
 
   await knex('cosmetic_formula_details').insert({
@@ -246,5 +246,5 @@ export async function seed(knex) {
     await knex.raw('PRAGMA foreign_keys = ON;');
   }
 
-  console.log('✅ Initial Seed completed (Cosmetic Formulation Focus)!');
+  console.log('✅ Initial Seed completed (Grams UOM & Cosmetic Focus)!');
 }
