@@ -596,27 +596,31 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
 
     // MAKER-CHECKER SEPARATION ENFORCEMENT
     if (action === 'APPROVE') {
-      if (!req.user.permissions?.includes('formula.approve') && !req.user.roles?.includes('Super Admin')) {
+      const isSuperAdmin = req.user.roles?.includes('Super Admin');
+
+      if (!req.user.permissions?.includes('formula.approve') && !isSuperAdmin) {
         return res.status(403).json({ success: false, message: 'Forbidden. formula.approve permission required.' });
       }
 
-      if (Number(version.created_by) === Number(req.user.id)) {
-        return res.status(422).json({
-          success: false,
-          message: 'Maker-Checker policy violation: The user who created the formula version cannot approve it.',
-        });
-      }
+      if (!isSuperAdmin) {
+        if (Number(version.created_by) === Number(req.user.id)) {
+          return res.status(422).json({
+            success: false,
+            message: 'Maker-Checker policy violation: The user who created the formula version cannot approve it.',
+          });
+        }
 
-      const submitRecord = await db('formula_workflow_records')
-        .where({ version_id: versionId, action: 'SUBMIT' })
-        .orderBy('id', 'desc')
-        .first();
+        const submitRecord = await db('formula_workflow_records')
+          .where({ version_id: versionId, action: 'SUBMIT' })
+          .orderBy('id', 'desc')
+          .first();
 
-      if (submitRecord && Number(submitRecord.actor_id) === Number(req.user.id)) {
-        return res.status(422).json({
-          success: false,
-          message: 'Maker-Checker policy violation: The user who submitted the formula version cannot approve it.',
-        });
+        if (submitRecord && Number(submitRecord.actor_id) === Number(req.user.id)) {
+          return res.status(422).json({
+            success: false,
+            message: 'Maker-Checker policy violation: The user who submitted the formula version cannot approve it.',
+          });
+        }
       }
     }
 
