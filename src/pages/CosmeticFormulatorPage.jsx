@@ -157,7 +157,7 @@ export function CosmeticFormulatorPage() {
   const saveDraft = () => {
     if (!selectedVersionId) return;
     setSaving(true);
-    apiFetch(`/api/v1/formulas/versions/${selectedVersionId}`, {
+    return apiFetch(`/api/v1/formulas/versions/${selectedVersionId}`, {
       method: 'PUT',
       body: JSON.stringify({
         lockVersion: activeVersion.lock_version,
@@ -169,11 +169,17 @@ export function CosmeticFormulatorPage() {
       .then(d => {
         setSaving(false);
         if (d.success) {
-          alert('Cosmetic draft saved successfully!');
           loadVersion(selectedVersionId);
+          return true;
         } else {
           alert(`Save Error: ${d.message}`);
+          return false;
         }
+      })
+      .catch(err => {
+        setSaving(false);
+        alert(`Save Error: ${err.message}`);
+        return false;
       });
   };
 
@@ -209,6 +215,29 @@ export function CosmeticFormulatorPage() {
       }
       if (!isValidPct) {
         alert(`Workflow Submission Blocked: Total formula percentage is ${totalPct}%. Total must equal 100.00% before submitting for review.`);
+        return;
+      }
+
+      // Auto-save composition & technical specs to database first before transition
+      setSaving(true);
+      try {
+        const saveRes = await apiFetch(`/api/v1/formulas/versions/${selectedVersionId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            lockVersion: activeVersion.lock_version,
+            materials,
+            categoryDetails: cosmeticDetails,
+          }),
+        });
+        const saveData = await saveRes.json();
+        setSaving(false);
+        if (!saveRes.ok || !saveData.success) {
+          alert(`Auto-Save Error before submission: ${saveData.message}`);
+          return;
+        }
+      } catch (err) {
+        setSaving(false);
+        alert(`Auto-Save Error: ${err.message}`);
         return;
       }
     }
@@ -323,21 +352,21 @@ export function CosmeticFormulatorPage() {
             <div className="flex items-center gap-2">
               {activeVersion.version_status === 'DRAFT' && (
                 <>
-                  <button onClick={saveDraft} disabled={saving} className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
-                    <Save className="w-3.5 h-3.5 text-slate-600" /> Save Draft
+                  <button onClick={async () => { const ok = await saveDraft(); if (ok) alert('Cosmetic draft saved successfully!'); }} disabled={saving} className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+                    <Save className="w-3.5 h-3.5 text-slate-600" /> {saving ? 'Saving...' : 'Save Draft'}
                   </button>
-                  <button onClick={() => handleWorkflow('SUBMIT')} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs">
+                  <button onClick={() => handleWorkflow('SUBMIT')} disabled={saving} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs disabled:opacity-50">
                     <Send className="w-3.5 h-3.5" /> Submit for Review
                   </button>
                 </>
               )}
               {activeVersion.version_status === 'UNDER_REVIEW' && (
-                <button onClick={() => handleWorkflow('ENDORSE')} className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">
+                <button onClick={() => handleWorkflow('ENDORSE')} disabled={saving} className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
                   Endorse for Approval
                 </button>
               )}
               {activeVersion.version_status === 'FOR_APPROVAL' && (
-                <button onClick={() => handleWorkflow('APPROVE')} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">
+                <button onClick={() => handleWorkflow('APPROVE')} disabled={saving} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50">
                   Approve Version
                 </button>
               )}
