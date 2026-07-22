@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 export async function seed(knex) {
   const passwordHash = await bcrypt.hash('Admin@123456', 10);
@@ -142,8 +143,8 @@ export async function seed(knex) {
 
   // 5. System Atomic Sequences
   const seqs = [
-    { sequence_name: 'FORMULA_CODE', current_val: 100, prefix: 'FORM', year: 2026 },
-    { sequence_name: 'BATCH_NUMBER', current_val: 100, prefix: 'BAT', year: 2026 },
+    { sequence_name: 'FORMULA_CODE', current_val: 105, prefix: 'FORM', year: 2026 },
+    { sequence_name: 'BATCH_NUMBER', current_val: 105, prefix: 'BAT', year: 2026 },
     { sequence_name: 'DEVIATION_CODE', current_val: 10, prefix: 'DEV', year: 2026 },
     { sequence_name: 'CORRECTION_CODE', current_val: 10, prefix: 'COR', year: 2026 },
     { sequence_name: 'REWORK_CODE', current_val: 5, prefix: 'RWK', year: 2026 },
@@ -223,6 +224,190 @@ export async function seed(knex) {
           });
         }
       }
+    }
+  }
+
+  // 7. Seed Production Batches & QC Inspections
+  await knex('qc_inspections').del();
+  await knex('batch_material_requirements').del();
+  await knex('batch_steps').del();
+  await knex('batch_phases').del();
+  await knex('production_batches').del();
+
+  const formulas = await knex('formulas').select('*');
+  const fCosmetic = formulas.find(f => f.product_category === 'Cosmetic') || formulas[0];
+  const fPerfume = formulas.find(f => f.product_category === 'Perfume No Brand' || f.product_category === 'Perfume Brand') || formulas[1] || formulas[0];
+  const fSupplement = formulas.find(f => f.product_category === 'Food Supplement') || formulas[2] || formulas[0];
+
+  const fVersions = await knex('formula_versions').select('*');
+  const vCosmetic = fVersions.find(v => v.formula_id === fCosmetic?.id) || fVersions[0];
+  const vPerfume = fVersions.find(v => v.formula_id === fPerfume?.id) || fVersions[1] || fVersions[0];
+  const vSupplement = fVersions.find(v => v.formula_id === fSupplement?.id) || fVersions[2] || fVersions[0];
+
+  const mx01Machine = await knex('machines').where({ code: 'MX-01' }).first();
+  const mt01Machine = await knex('machines').where({ code: 'MT-01' }).first();
+  const tp01Machine = await knex('machines').where({ code: 'TP-01' }).first();
+
+  if (fCosmetic && vCosmetic) {
+    // Batch 1: Cosmetic (In Progress)
+    const [bId1] = await knex('production_batches').insert({
+      batch_number: 'BAT-2026-0101',
+      formula_id: fCosmetic.id,
+      formula_version_id: vCosmetic.id,
+      category: 'Cosmetics',
+      status: 'In Progress',
+      target_batch_size: '500.000000',
+      overall_progress_percent: '40.000000',
+      assigned_operator_id: opUser?.id || null,
+      assigned_machine_id: mx01Machine?.id || null,
+      snapshot_hash: crypto.randomBytes(32).toString('hex'),
+      created_by: adminId,
+    }).then(r => [r[0]]);
+
+    const [bpId1] = await knex('batch_phases').insert({
+      batch_id: bId1,
+      phase_letter: 'A',
+      phase_name: 'Phase A: Water Phase',
+      sequence: 1,
+      status: 'In Progress',
+    }).then(r => [r[0]]);
+
+    const [bsId1] = await knex('batch_steps').insert({
+      batch_id: bId1,
+      phase_id: bpId1,
+      step_number: 1,
+      instructions: 'Weigh Deionized Water & Charge into MX-01 Main Vessel',
+      status: 'Completed',
+      lock_version: 1,
+    }).then(r => [r[0]]);
+
+    const [bsId2] = await knex('batch_steps').insert({
+      batch_id: bId1,
+      phase_id: bpId1,
+      step_number: 2,
+      instructions: 'Weigh Glycerin USP & Mix at 400 RPM for 10 mins',
+      status: 'Pending',
+      lock_version: 1,
+    }).then(r => [r[0]]);
+
+    const mats = await knex('materials').select('*');
+    const matWtr = mats.find(m => m.code === 'MAT-WTR-001') || mats[0];
+    const matGly = mats.find(m => m.code === 'MAT-GLY-002') || mats[1] || mats[0];
+
+    if (matWtr) {
+      await knex('batch_material_requirements').insert({
+        batch_id: bId1,
+        step_id: bsId1,
+        material_id: matWtr.id,
+        material_code: matWtr.code,
+        material_name: matWtr.name,
+        percentage: '65.000000',
+        target_weight: '325.000000',
+        tolerance_percent: '1.000000',
+        min_weight: '321.750000',
+        max_weight: '328.250000',
+      });
+    }
+
+    if (matGly) {
+      await knex('batch_material_requirements').insert({
+        batch_id: bId1,
+        step_id: bsId2,
+        material_id: matGly.id,
+        material_code: matGly.code,
+        material_name: matGly.name,
+        percentage: '5.000000',
+        target_weight: '25.000000',
+        tolerance_percent: '1.000000',
+        min_weight: '24.750000',
+        max_weight: '25.250000',
+      });
+    }
+
+    const qrToken1 = crypto.randomBytes(32).toString('hex');
+    await knex('qr_tokens').insert({
+      token_hash: crypto.createHash('sha256').update(qrToken1).digest('hex'),
+      batch_id: bId1,
+      formula_version_id: vCosmetic.id,
+      is_single_use: false,
+      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  }
+
+  if (fPerfume && vPerfume) {
+    // Batch 2: Perfume (Assigned / Ready)
+    const [bId2] = await knex('production_batches').insert({
+      batch_number: 'BAT-2026-0102',
+      formula_id: fPerfume.id,
+      formula_version_id: vPerfume.id,
+      category: 'Perfumes',
+      status: 'Assigned',
+      target_batch_size: '250.000000',
+      overall_progress_percent: '0.000000',
+      assigned_operator_id: opUser?.id || null,
+      assigned_machine_id: mt01Machine?.id || null,
+      snapshot_hash: crypto.randomBytes(32).toString('hex'),
+      created_by: adminId,
+    }).then(r => [r[0]]);
+
+    const [bpId2] = await knex('batch_phases').insert({
+      batch_id: bId2,
+      phase_letter: 'A',
+      phase_name: 'Phase A: Maceration Charge',
+      sequence: 1,
+      status: 'Waiting',
+    }).then(r => [r[0]]);
+
+    const [bsId3] = await knex('batch_steps').insert({
+      batch_id: bId2,
+      phase_id: bpId2,
+      step_number: 1,
+      instructions: 'Charge Fragrance Concentrate Oil into Maceration Tank MT-01',
+      status: 'Pending',
+      lock_version: 1,
+    }).then(r => [r[0]]);
+
+    const mats = await knex('materials').select('*');
+    const matFo = mats.find(m => m.code === 'MAT-FO-102') || mats[0];
+    if (matFo) {
+      await knex('batch_material_requirements').insert({
+        batch_id: bId2,
+        step_id: bsId3,
+        material_id: matFo.id,
+        material_code: matFo.code,
+        material_name: matFo.name,
+        percentage: '5.000000',
+        target_weight: '12.500000',
+        tolerance_percent: '1.000000',
+        min_weight: '12.375000',
+        max_weight: '12.625000',
+      });
+    }
+  }
+
+  if (fSupplement && vSupplement) {
+    // Batch 3: Food Supplement (Pending QC)
+    const [bId3] = await knex('production_batches').insert({
+      batch_number: 'BAT-2026-0103',
+      formula_id: fSupplement.id,
+      formula_version_id: vSupplement.id,
+      category: 'Food Supplements',
+      status: 'Pending QC',
+      target_batch_size: '100.000000',
+      overall_progress_percent: '100.000000',
+      assigned_operator_id: opUser?.id || null,
+      assigned_machine_id: tp01Machine?.id || null,
+      snapshot_hash: crypto.randomBytes(32).toString('hex'),
+      created_by: adminId,
+    }).then(r => [r[0]]);
+
+    const suppTemplate = await knex('qc_templates').where({ category: 'Food Supplements' }).first();
+    if (suppTemplate) {
+      await knex('qc_inspections').insert({
+        batch_id: bId3,
+        template_id: suppTemplate.id,
+        status: 'Pending QC',
+      });
     }
   }
 

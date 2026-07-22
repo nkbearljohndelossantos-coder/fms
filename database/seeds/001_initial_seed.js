@@ -43,90 +43,60 @@ export async function seed(knex) {
   await knex('users').del();
 
   // 1. Roles
-  const [adminRoleId, formulatorRoleId, reviewerRoleId, approverRoleId, viewerRoleId] = await Promise.all([
-    knex('roles').insert({ name: 'Super Admin', description: 'Full system control and administration' }).then(res => res[0] || 1),
-    knex('roles').insert({ name: 'Formulator', description: 'Can create and edit draft formulas' }).then(res => res[0] || 2),
-    knex('roles').insert({ name: 'Reviewer', description: 'Can review and return/endorse formulas' }).then(res => res[0] || 3),
-    knex('roles').insert({ name: 'Approver', description: 'Can approve or reject submitted formulas' }).then(res => res[0] || 4),
-    knex('roles').insert({ name: 'Viewer', description: 'Read-only access to formulas and reports' }).then(res => res[0] || 5),
-  ]);
-
-  // 2. Permissions
-  const permissionKeys = [
-    { name: 'Manage System Settings', key: 'settings:manage' },
-    { name: 'Manage Users & Roles', key: 'users:manage' },
-    { name: 'View Materials', key: 'materials:view' },
-    { name: 'Manage Materials', key: 'materials:manage' },
-    { name: 'View Formulas', key: 'formulas:view' },
-    { name: 'Create/Edit Formulas', key: 'formulas:manage' },
-    { name: 'Submit Formula Review', key: 'formulas:submit' },
-    { name: 'Review Formulas', key: 'formulas:review' },
-    { name: 'Approve Formulas', key: 'formulas:approve' },
-    { name: 'Calculate Batches', key: 'batch:calculate' },
-    { name: 'Perform Perfume Conversions', key: 'perfume:convert' },
-    { name: 'Export Reports', key: 'reports:export' },
-    { name: 'View Audit Logs', key: 'audit:view' },
+  const targetRoles = [
+    { name: 'Super Admin', description: 'Full System Administration' },
+    { name: 'Formulation Chemist', description: 'R&D Formula Creation & Submission' },
+    { name: 'Production Supervisor', description: 'Batch Assignment, Monitoring, Deviation Review & Force Unlock' },
+    { name: 'Compounding Operator', description: 'Touch-Friendly MES Step Weighing & Batch Execution Only' },
+    { name: 'QC Specialist', description: 'Quality Inspection, Parameters Entry & Batch Release' },
+    { name: 'Formulator', description: 'Formulator Role' },
+    { name: 'Reviewer', description: 'Reviewer Role' },
+    { name: 'Approver', description: 'Approver Role' },
+    { name: 'Viewer', description: 'Read-only access' },
   ];
 
-  const permissionIds = [];
-  for (const p of permissionKeys) {
-    const id = await knex('permissions').insert(p).then(res => res[0] || permissionIds.length + 1);
-    permissionIds.push(id);
+  const roleMap = {};
+  for (const r of targetRoles) {
+    const [id] = await knex('roles').insert(r).then(res => [res[0]]);
+    roleMap[r.name] = id;
   }
 
-  // Grant all permissions to Super Admin role
-  for (const permId of permissionIds) {
-    await knex('role_permissions').insert({ role_id: adminRoleId, permission_id: permId });
-  }
-
-  // 3. Super Admin User
+  // 2. Users
   const passwordHash = await bcrypt.hash('Admin@123456', 10);
-  const [adminUserId] = await knex('users').insert({
-    username: 'admin',
-    email: 'admin@nkb.com',
-    password_hash: passwordHash,
-    first_name: 'Super',
-    last_name: 'Admin',
-    is_active: true,
-  }).then(res => [res[0] || 1]);
+  const usersToSeed = [
+    { username: 'admin', email: 'admin@nkb.com', first_name: 'Super', last_name: 'Admin', roleName: 'Super Admin' },
+    { username: 'chemist1', email: 'chemist1@nkb.com', first_name: 'Elena', last_name: 'Rostova (Maker)', roleName: 'Formulation Chemist' },
+    { username: 'chemist2', email: 'chemist2@nkb.com', first_name: 'Marcus', last_name: 'Vance (Checker)', roleName: 'Formulation Chemist' },
+    { username: 'supervisor', email: 'supervisor@nkb.com', first_name: 'David', last_name: 'Miller', roleName: 'Production Supervisor' },
+    { username: 'operator', email: 'operator@nkb.com', first_name: 'John', last_name: 'Delos Santos', roleName: 'Compounding Operator' },
+    { username: 'qc_spec', email: 'qc@nkb.com', first_name: 'Sarah', last_name: 'Jenkins', roleName: 'QC Specialist' },
+    { username: 'formulator1', email: 'formulator@nkb.com', first_name: 'Elena', last_name: 'Santos', roleName: 'Formulation Chemist' },
+    { username: 'reviewer1', email: 'reviewer@nkb.com', first_name: 'Marcus', last_name: 'Reyes', roleName: 'Production Supervisor' },
+    { username: 'approver1', email: 'approver@nkb.com', first_name: 'Dr. Sofia', last_name: 'Cruz', roleName: 'Formulation Chemist' },
+  ];
 
-  await knex('user_roles').insert({ user_id: adminUserId, role_id: adminRoleId });
+  const userMap = {};
+  for (const u of usersToSeed) {
+    const [userId] = await knex('users').insert({
+      username: u.username,
+      email: u.email,
+      password_hash: passwordHash,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      is_active: true,
+    }).then(res => [res[0]]);
+    userMap[u.email] = userId;
 
-  // Additional Seed Users
-  const formulatorHash = await bcrypt.hash('Formulator@123', 10);
-  const [formulatorUserId] = await knex('users').insert({
-    username: 'formulator1',
-    email: 'formulator@nkb.com',
-    password_hash: formulatorHash,
-    first_name: 'Elena',
-    last_name: 'Santos',
-    is_active: true,
-  }).then(res => [res[0] || 2]);
-  await knex('user_roles').insert({ user_id: formulatorUserId, role_id: formulatorRoleId });
+    const rId = roleMap[u.roleName] || roleMap['Super Admin'];
+    await knex('user_roles').insert({ user_id: userId, role_id: rId });
+  }
 
-  const reviewerHash = await bcrypt.hash('Reviewer@123', 10);
-  const [reviewerUserId] = await knex('users').insert({
-    username: 'reviewer1',
-    email: 'reviewer@nkb.com',
-    password_hash: reviewerHash,
-    first_name: 'Marcus',
-    last_name: 'Reyes',
-    is_active: true,
-  }).then(res => [res[0] || 3]);
-  await knex('user_roles').insert({ user_id: reviewerUserId, role_id: reviewerRoleId });
+  const adminUserId = userMap['admin@nkb.com'];
+  const formulatorUserId = userMap['chemist1@nkb.com'] || userMap['formulator@nkb.com'];
+  const reviewerUserId = userMap['supervisor@nkb.com'] || userMap['reviewer@nkb.com'];
+  const approverUserId = userMap['chemist2@nkb.com'] || userMap['approver@nkb.com'];
 
-  const approverHash = await bcrypt.hash('Approver@123', 10);
-  const [approverUserId] = await knex('users').insert({
-    username: 'approver1',
-    email: 'approver@nkb.com',
-    password_hash: approverHash,
-    first_name: 'Dr. Sofia',
-    last_name: 'Cruz',
-    is_active: true,
-  }).then(res => [res[0] || 4]);
-  await knex('user_roles').insert({ user_id: approverUserId, role_id: approverRoleId });
-
-  // 4. Companies & Vendors
+  // 3. Companies & Vendors
   const [c1, c2, c3] = await Promise.all([
     knex('companies').insert({ code: 'NKB-LAB', name: 'NKB Laboratories Inc.', contact_person: 'John Doe', email: 'lab@nkb.com', phone: '+63 2 8123 4567' }).then(res => res[0] || 1),
     knex('companies').insert({ code: 'COS-TECH', name: 'CosmeTech Innovations', contact_person: 'Jane Smith', email: 'contact@cosmetech.com' }).then(res => res[0] || 2),
@@ -139,7 +109,7 @@ export async function seed(knex) {
     knex('vendors').insert({ code: 'V-BIOEXT', name: 'BioExtracts Organics', contact_person: 'David Miller', email: 'dmiller@bioextracts.com' }).then(res => res[0] || 3),
   ]);
 
-  // 5. System Settings
+  // 4. System Settings
   await knex('system_settings').insert([
     { key: 'percentage_display_decimals', value: '4', description: 'Decimals for displaying percentages' },
     { key: 'quantity_display_decimals', value: '4', description: 'Decimals for displaying material weights/quantities' },
@@ -149,9 +119,8 @@ export async function seed(knex) {
     { key: 'formula_tolerance_pct', value: '0.01', description: 'Tolerance for 100% total formula validation' },
   ]);
 
-  // 6. Seed Materials
+  // 5. Seed Materials
   const rawMaterials = [
-    // Cosmetic & General
     { code: 'MAT-WTR-001', name: 'Deionized Water', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '12.500000', currency_code: 'PHP', density_kg_per_l: '1.000000', specific_gravity: '1.000000', description: 'Pure deionized water', is_inventoried: true },
     { code: 'MAT-GLY-002', name: 'Glycerin USP', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '185.000000', currency_code: 'PHP', density_kg_per_l: '1.261000', specific_gravity: '1.261000', description: 'Humectant and skin protectant', is_inventoried: true },
     { code: 'MAT-SLES-003', name: 'Sodium Lauryl Ether Sulfate (SLES 70%)', company_id: c2, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '240.000000', currency_code: 'PHP', density_kg_per_l: '1.050000', specific_gravity: '1.050000', description: 'Primary anionic surfactant', is_inventoried: true },
@@ -159,14 +128,12 @@ export async function seed(knex) {
     { code: 'MAT-NIAC-005', name: 'Niacinamide (Vitamin B3)', company_id: c1, vendor_id: v3, uom: 'kg', uom_category: 'MASS', cost: '1850.000000', currency_code: 'PHP', density_kg_per_l: '1.200000', specific_gravity: '1.200000', description: 'Brightening active ingredient', is_inventoried: false },
     { code: 'MAT-PHENOX-006', name: 'Phenoxyethanol Preservative', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '650.000000', currency_code: 'PHP', density_kg_per_l: '1.107000', specific_gravity: '1.107000', description: 'Broad-spectrum preservative', is_inventoried: true },
 
-    // Perfumes
     { code: 'MAT-ETH-101', name: 'Ethyl Alcohol 96% Perfumery Grade', company_id: c1, vendor_id: v1, uom: 'L', uom_category: 'VOLUME', cost: '145.000000', currency_code: 'PHP', density_kg_per_l: '0.808000', specific_gravity: '0.808000', description: 'Carrier solvent for fragrance', is_inventoried: true },
     { code: 'MAT-FO-102', name: 'French Vanilla Fragrance Oil', company_id: c1, vendor_id: v2, uom: 'kg', uom_category: 'MASS', cost: '4200.000000', currency_code: 'PHP', density_kg_per_l: '0.985000', specific_gravity: '0.985000', description: 'Concentrated fragrance oil note', is_inventoried: true },
     { code: 'MAT-FO-103', name: 'Ocean Breeze Fragrance Oil', company_id: c1, vendor_id: v2, uom: 'kg', uom_category: 'MASS', cost: '3900.000000', currency_code: 'PHP', density_kg_per_l: '0.975000', specific_gravity: '0.975000', description: 'Fresh aquatic fragrance oil note', is_inventoried: true },
     { code: 'MAT-FIX-104', name: 'Galaxolide 50% Fixative', company_id: c1, vendor_id: v2, uom: 'kg', uom_category: 'MASS', cost: '1950.000000', currency_code: 'PHP', density_kg_per_l: '1.005000', specific_gravity: '1.005000', description: 'Perfume fixative agent', is_inventoried: true },
     { code: 'MAT-PEG-105', name: 'PEG-40 Hydrogenated Castor Oil', company_id: c1, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '480.000000', currency_code: 'PHP', density_kg_per_l: '1.030000', specific_gravity: '1.030000', description: 'Solubilizer for fragrance in water', is_inventoried: true },
 
-    // Food Supplements
     { code: 'MAT-VITC-201', name: 'Ascorbic Acid (Vitamin C Powder)', company_id: c3, vendor_id: v3, uom: 'kg', uom_category: 'MASS', cost: '890.000000', currency_code: 'PHP', density_kg_per_l: '1.650000', specific_gravity: '1.650000', description: 'Active dietary vitamin ingredient', is_inventoried: true },
     { code: 'MAT-ZINC-202', name: 'Zinc Gluconate Powder', company_id: c3, vendor_id: v3, uom: 'kg', uom_category: 'MASS', cost: '1420.000000', currency_code: 'PHP', density_kg_per_l: '1.500000', specific_gravity: '1.500000', description: 'Essential mineral active', is_inventoried: true },
     { code: 'MAT-MCC-203', name: 'Microcrystalline Cellulose 102 (MCC)', company_id: c3, vendor_id: v1, uom: 'kg', uom_category: 'MASS', cost: '310.000000', currency_code: 'PHP', density_kg_per_l: '1.450000', specific_gravity: '1.450000', description: 'Tablet/capsule filler binder (Excipient)', is_inventoried: true },
@@ -180,8 +147,7 @@ export async function seed(knex) {
     materialMap[m.code] = id;
   }
 
-  // 7. Seed Formulas
-  // Formula 1: Cosmetic Gentle Facial Cleanser (APPROVED)
+  // 6. Seed Formulas
   const [f1Id] = await knex('formulas').insert({
     code: 'F-COS-001',
     name: 'Gentle Hydrating Facial Cleanser',
@@ -200,7 +166,7 @@ export async function seed(knex) {
     lock_version: 0,
     version_status: 'APPROVED',
     change_type: 'INITIAL_RELEASE',
-    revision_reason: 'Initial approved formula formula launch',
+    revision_reason: 'Initial approved formula launch',
     change_summary: 'Baseline gentle cleanser formulation',
     target_batch_size: '100.000000',
     target_batch_uom: 'kg',
@@ -218,7 +184,6 @@ export async function seed(knex) {
   const [phaseB1] = await knex('formula_phases').insert({ version_id: v1Id, phase_name: 'Phase B - Surfactant Phase', phase_order: 2 }).then(res => [res[0] || 2]);
   const [phaseC1] = await knex('formula_phases').insert({ version_id: v1Id, phase_name: 'Cooling Phase', phase_order: 3 }).then(res => [res[0] || 3]);
 
-  // Composition: Water 65%, Glycerin 5%, SLES 18%, CAPB 9.5%, Niacinamide 1.5%, Phenoxyethanol 1.0% = 100.00%
   const f1Materials = [
     { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-WTR-001'], material_code_snapshot: 'MAT-WTR-001', material_name_snapshot: 'Deionized Water', uom_snapshot: 'kg', percentage: '65.000000', calculated_quantity: '65.000000', addition_order: 1, temp_c: 75, mixing_speed_rpm: 300, duration_min: 15, line_cost: '812.500000', function_name: 'Solvent Base' },
     { version_id: v1Id, phase_id: phaseA1, material_id: materialMap['MAT-GLY-002'], material_code_snapshot: 'MAT-GLY-002', material_name_snapshot: 'Glycerin USP', uom_snapshot: 'kg', percentage: '5.000000', calculated_quantity: '5.000000', addition_order: 2, temp_c: 75, mixing_speed_rpm: 400, duration_min: 10, line_cost: '925.000000', function_name: 'Humectant' },
@@ -244,35 +209,7 @@ export async function seed(knex) {
     manufacturing_conditions: 'Standard stainless steel jacketed vessel with propeller mixer',
   });
 
-  // Cost Snapshot for V1.0
-  const [snap1Id] = await knex('formula_cost_snapshots').insert({
-    version_id: v1Id,
-    raw_material_cost: '11477.500000',
-    process_loss_pct: '0.500000',
-    packaging_cost: '1500.000000',
-    labor_cost: '800.000000',
-    overhead_cost: '600.000000',
-    total_cost: '14434.887500',
-    cost_per_unit: '144.348875',
-    currency_code: 'PHP',
-  }).then(res => [res[0] || 1]);
-
-  for (const m of f1Materials) {
-    await knex('formula_cost_snapshot_items').insert({
-      snapshot_id: snap1Id,
-      material_id: m.material_id,
-      material_code_snapshot: m.material_code_snapshot,
-      material_name_snapshot: m.material_name_snapshot,
-      percentage: m.percentage,
-      quantity: m.calculated_quantity,
-      uom: m.uom_snapshot,
-      cost_per_uom: (Number(m.line_cost) / Number(m.calculated_quantity)).toString(),
-      line_cost: m.line_cost,
-      currency_code: 'PHP',
-    });
-  }
-
-  // Formula 2: Perfume No Brand Vanilla Mist (APPROVED)
+  // Formula 2: Perfume No Brand Vanilla Mist
   const [f2Id] = await knex('formulas').insert({
     code: 'F-PRF-001',
     name: 'Vanilla Blossom Body Mist (No Brand Base)',
@@ -316,22 +253,7 @@ export async function seed(knex) {
     await knex('formula_version_materials').insert(m);
   }
 
-  await knex('perfume_formula_details').insert({
-    version_id: v2Id,
-    concentration_tier: 'Body Mist',
-    fragrance_pct: '5.000000',
-    alcohol_pct: '75.000000',
-    water_pct: '17.000000',
-    fixative_pct: '1.000000',
-    solubilizer_pct: '2.000000',
-    maceration_days: 14,
-    filtration_required: true,
-    cooling_required_c: '4°C for 24 hours prior to filtration',
-    odor_profile: 'Sweet warm vanilla with amber woody base note',
-    packaging_recommendation: 'Amber glass bottle with spray pump',
-  });
-
-  // Formula 3: Food Supplement Vitamin C + Zinc Capsule (APPROVED)
+  // Formula 3: Food Supplement Vit C
   const [f3Id] = await knex('formulas').insert({
     code: 'F-SUP-001',
     name: 'Immune Shield Vit C + Zinc Capsule 500mg',
@@ -351,7 +273,7 @@ export async function seed(knex) {
     version_status: 'APPROVED',
     change_type: 'INITIAL_RELEASE',
     revision_reason: 'Commercial approval for dietary supplement launch',
-    target_batch_size: '10.000000', // 10 kg batch = 20,000 capsules @ 500mg target fill
+    target_batch_size: '10.000000',
     target_batch_uom: 'kg',
     expected_yield: '99.000000',
     shelf_life: '24 Months',
@@ -363,62 +285,16 @@ export async function seed(knex) {
     approval_timestamp: knex.fn.now(),
   }).then(res => [res[0] || 3]);
 
-  await knex('supplement_formula_details').insert({
-    version_id: v3Id,
-    dosage_form: 'Capsules',
-    composition_mode: 'AMOUNT_PER_SERVING',
-    serving_size: '1.000000',
-    serving_uom: 'capsule',
-    servings_per_container: 60,
-    capsule_size: 'Size 0',
-    tablet_weight: '500.000000',
-    tablet_weight_uom: 'mg',
-    daily_recommended_intake: 'Take 1 capsule daily after meals',
-    warning_statement: 'Consult physician if pregnant or taking medication',
-    storage_instruction: 'Store tightly sealed in original container',
-  });
-
-  // Active Vit C (300mg + 5% overage = 315mg), Zinc (15mg + 5% overage = 15.75mg), MCC filler q.s. (164.25mg), Mag Stearate (5mg) = 500mg total fill
   const f3Materials = [
-    { version_id: v3Id, material_id: materialMap['MAT-VITC-201'], material_code_snapshot: 'MAT-VITC-201', material_name_snapshot: 'Ascorbic Acid (Vitamin C Powder)', uom_snapshot: 'kg', percentage: '63.000000', serving_amount: '300.000000', serving_uom: 'mg', calculated_quantity: '6.300000', line_cost: '5607.000000', function_name: 'Active Vitamin C', is_qs_balancing_material: false },
-    { version_id: v3Id, material_id: materialMap['MAT-ZINC-202'], material_code_snapshot: 'MAT-ZINC-202', material_name_snapshot: 'Zinc Gluconate Powder', uom_snapshot: 'kg', percentage: '3.150000', serving_amount: '15.000000', serving_uom: 'mg', calculated_quantity: '0.315000', line_cost: '447.300000', function_name: 'Active Zinc Mineral', is_qs_balancing_material: false },
-    { version_id: v3Id, material_id: materialMap['MAT-MCC-203'], material_code_snapshot: 'MAT-MCC-203', material_name_snapshot: 'Microcrystalline Cellulose 102 (MCC)', uom_snapshot: 'kg', percentage: '32.850000', serving_amount: '164.250000', serving_uom: 'mg', calculated_quantity: '3.285000', line_cost: '1018.350000', function_name: 'Filler / Binder (q.s. Excipient)', is_qs_balancing_material: true },
-    { version_id: v3Id, material_id: materialMap['MAT-MAGST-204'], material_code_snapshot: 'MAT-MAGST-204', material_name_snapshot: 'Magnesium Stearate USP', uom_snapshot: 'kg', percentage: '1.000000', serving_amount: '5.000000', serving_uom: 'mg', calculated_quantity: '0.100000', line_cost: '45.000000', function_name: 'Lubricant Excipient', is_qs_balancing_material: false },
+    { version_id: v3Id, material_id: materialMap['MAT-VITC-201'], material_code_snapshot: 'MAT-VITC-201', material_name_snapshot: 'Ascorbic Acid (Vitamin C Powder)', uom_snapshot: 'kg', percentage: '63.000000', serving_amount: '300.000000', serving_uom: 'mg', calculated_quantity: '6.300000', line_cost: '5607.000000', function_name: 'Active Vitamin C' },
+    { version_id: v3Id, material_id: materialMap['MAT-ZINC-202'], material_code_snapshot: 'MAT-ZINC-202', material_name_snapshot: 'Zinc Gluconate Powder', uom_snapshot: 'kg', percentage: '3.150000', serving_amount: '15.000000', serving_uom: 'mg', calculated_quantity: '0.315000', line_cost: '447.300000', function_name: 'Active Zinc Mineral' },
+    { version_id: v3Id, material_id: materialMap['MAT-MCC-203'], material_code_snapshot: 'MAT-MCC-203', material_name_snapshot: 'Microcrystalline Cellulose 102 (MCC)', uom_snapshot: 'kg', percentage: '32.850000', serving_amount: '164.250000', serving_uom: 'mg', calculated_quantity: '3.285000', line_cost: '1018.350000', function_name: 'Filler / Binder (q.s. Excipient)' },
+    { version_id: v3Id, material_id: materialMap['MAT-MAGST-204'], material_code_snapshot: 'MAT-MAGST-204', material_name_snapshot: 'Magnesium Stearate USP', uom_snapshot: 'kg', percentage: '1.000000', serving_amount: '5.000000', serving_uom: 'mg', calculated_quantity: '0.100000', line_cost: '45.000000', function_name: 'Lubricant Excipient' },
   ];
 
   for (const m of f3Materials) {
-    const [vmId] = await knex('formula_version_materials').insert(m).then(res => [res[0]]);
-    const overagePct = m.material_id === materialMap['MAT-VITC-201'] || m.material_id === materialMap['MAT-ZINC-202'] ? '5.000000' : '0.000000';
-    const isExcipient = m.material_id === materialMap['MAT-MCC-203'] || m.material_id === materialMap['MAT-MAGST-204'];
-    await knex('supplement_serving_details').insert({
-      version_material_id: vmId,
-      active_amount_per_serving: m.serving_amount,
-      active_uom: m.serving_uom,
-      overage_pct: overagePct,
-      is_excipient: isExcipient,
-      is_fixed_non_active: m.material_id === materialMap['MAT-MAGST-204'],
-    });
+    await knex('formula_version_materials').insert(m);
   }
-
-  // 8. Seed Perfume Mixture for Conversion Testing
-  const [mix1Id] = await knex('perfume_mixtures').insert({
-    mixture_code: 'MIX-2026-001',
-    mixture_name: 'Existing Vanilla Base Mixture Lot 402',
-    source_formula_version_id: v2Id,
-    actual_total_weight: '50.000000',
-    weight_uom: 'kg',
-    recorded_date: knex.fn.now(),
-    remarks: 'Actual recorded batch mixture for conversion testing',
-    created_by: formulatorUserId,
-  }).then(res => [res[0] || 1]);
-
-  await knex('perfume_mixture_materials').insert([
-    { mixture_id: mix1Id, material_id: materialMap['MAT-FO-102'], percentage: '4.000000', actual_quantity: '2.000000', uom: 'kg' },
-    { mixture_id: mix1Id, material_id: materialMap['MAT-ETH-101'], percentage: '76.000000', actual_quantity: '38.000000', uom: 'L' },
-    { mixture_id: mix1Id, material_id: materialMap['MAT-FIX-104'], percentage: '1.000000', actual_quantity: '0.500000', uom: 'kg' },
-    { mixture_id: mix1Id, material_id: materialMap['MAT-PEG-105'], percentage: '2.000000', actual_quantity: '1.000000', uom: 'kg' },
-    { mixture_id: mix1Id, material_id: materialMap['MAT-WTR-001'], percentage: '17.000000', actual_quantity: '8.500000', uom: 'kg' },
-  ]);
 
   if (isMysql) {
     await knex.raw('SET FOREIGN_KEY_CHECKS = 1;');
@@ -426,5 +302,5 @@ export async function seed(knex) {
     await knex.raw('PRAGMA foreign_keys = ON;');
   }
 
-  console.log('✅ Seed completed successfully!');
+  console.log('✅ Initial Seed completed with all 6 Enterprise accounts!');
 }
