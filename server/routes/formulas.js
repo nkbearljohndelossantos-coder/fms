@@ -180,25 +180,66 @@ router.put('/versions/:versionId', authenticateToken, async (req, res) => {
     }
 
     await db.transaction(async (trx) => {
+      // 1. Resolve and create formula phases dynamically based on materials phase names
+      const existingPhases = await trx('formula_phases').where({ version_id: versionId });
+      const phaseMap = {};
+      existingPhases.forEach(p => {
+        phaseMap[p.phase_name] = p.id;
+      });
+
+      const uniquePhaseNames = [...new Set((materials || []).map(m => m.phase_name).filter(Boolean))];
+      let order = existingPhases.length ? Math.max(...existingPhases.map(p => p.phase_order)) + 1 : 1;
+
+      for (const pName of uniquePhaseNames) {
+        if (!phaseMap[pName]) {
+          const [newPhaseId] = await trx('formula_phases').insert({
+            version_id: versionId,
+            phase_name: pName,
+            phase_order: order++,
+          }).then(res => [res[0]]);
+          phaseMap[pName] = newPhaseId;
+        }
+      }
+
+      // 2. Fetch unit costs for materials to compute line costs
+      const materialIds = (materials || []).map(m => m.material_id);
+      const rawMaterials = await trx('materials').whereIn('id', materialIds);
+      const materialCostMap = {};
+      rawMaterials.forEach(m => {
+        materialCostMap[m.id] = new Decimal(m.cost || '0');
+      });
+
+      const batchSizeDec = new Decimal(version.target_batch_size || '100.000000');
+
+      // 3. Clear existing material composition rows
       await trx('formula_version_materials').where({ version_id: versionId }).del();
 
+      // 4. Insert resolved composition rows
       if (Array.isArray(materials) && materials.length > 0) {
-        const insertMats = materials.map((m, idx) => ({
-          version_id: versionId,
-          phase_id: m.phase_id || null,
-          material_id: m.material_id,
-          material_code_snapshot: m.material_code_snapshot,
-          material_name_snapshot: m.material_name_snapshot,
-          uom_snapshot: m.uom_snapshot || 'g',
-          percentage: m.percentage || '0.000000',
-          calculated_quantity: m.calculated_quantity || '0.000000',
-          addition_order: m.addition_order || (idx + 1),
-          function_name: m.function_name || null,
-          phase_name: m.phase_name || null,
-          temp_c: m.temp_c || null,
-          mixing_speed_rpm: m.mixing_speed_rpm || null,
-          duration_min: m.duration_min || null,
-        }));
+        const insertMats = materials.map((m, idx) => {
+          const pId = phaseMap[m.phase_name] || null;
+          const pctDec = new Decimal(m.percentage || '0');
+          const costPerG = materialCostMap[m.material_id] || new Decimal(0);
+          const reqWeight = pctDec.div(100).times(batchSizeDec);
+          const lineCost = reqWeight.times(costPerG);
+
+          return {
+            version_id: versionId,
+            phase_id: pId,
+            material_id: m.material_id,
+            material_code_snapshot: m.material_code_snapshot,
+            material_name_snapshot: m.material_name_snapshot,
+            uom_snapshot: m.uom_snapshot || 'g',
+            percentage: pctDec.toFixed(6),
+            calculated_quantity: reqWeight.toFixed(6),
+            addition_order: m.addition_order || (idx + 1),
+            function_name: m.function_name || null,
+            temp_c: m.temp_c || null,
+            mixing_speed_rpm: m.mixing_speed_rpm || null,
+            duration_min: m.duration_min || null,
+            line_cost: lineCost.toFixed(6),
+          };
+        });
         await trx('formula_version_materials').insert(insertMats);
       }
 
