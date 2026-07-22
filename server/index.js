@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { express, cors, helmet, rateLimit } from './cjsRequire.js';
 import dotenv from 'dotenv';
@@ -124,14 +125,38 @@ app.get('/api/v1/ready', async (req, res) => {
 
 // Single Process Production Static File Serving for compiled React SPA
 const clientDistPath = path.join(__dirname, '../dist');
+const clientPublicPath = path.join(__dirname, '../public');
+
 app.use(express.static(clientDistPath));
+app.use(express.static(clientPublicPath));
 
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api/')) {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
-  } else {
-    res.status(404).json({ success: false, message: 'API route not found' });
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API route not found' });
   }
+
+  const indexPath = path.join(clientDistPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+
+  return res.status(500).send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>NKB MES Formulation System - Build Required</title></head>
+      <body style="font-family: system-ui, sans-serif; padding: 40px; text-align: center; background: #f8fafc; color: #0f172a;">
+        <div style="max-width: 500px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+          <h2 style="color: #1e3a8a; margin-top: 0;">NKB Manufacturing MES System</h2>
+          <p style="color: #475569; font-size: 14px;">Frontend assets are currently building or require compilation on the server.</p>
+          <div style="background: #f1f5f9; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; text-align: left; margin: 20px 0;">
+            git pull origin main<br/>
+            npm run build
+          </div>
+          <p style="color: #64748b; font-size: 12px;">Run the build command in server SSH terminal then refresh this page.</p>
+        </div>
+      </body>
+    </html>
+  `);
 });
 
 // Centralized Error Handler
