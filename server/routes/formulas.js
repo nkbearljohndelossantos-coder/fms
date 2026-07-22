@@ -150,7 +150,8 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
 
     const materials = await db('formula_version_materials')
       .leftJoin('materials', 'formula_version_materials.material_id', 'materials.id')
-      .where({ version_id: versionId })
+      .leftJoin('formula_phases', 'formula_version_materials.phase_id', 'formula_phases.id')
+      .where({ 'formula_version_materials.version_id': versionId })
       .select(
         'formula_version_materials.*',
         'materials.code as material_code',
@@ -158,7 +159,8 @@ router.get('/versions/:versionId', authenticateToken, async (req, res) => {
         'materials.cost',
         'materials.currency_code',
         'materials.density_kg_per_l',
-        'materials.specific_gravity'
+        'materials.specific_gravity',
+        'formula_phases.phase_name'
       )
       .orderBy('formula_version_materials.addition_order', 'asc');
 
