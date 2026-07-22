@@ -92,14 +92,14 @@ export function App() {
   const { title, subtitle } = getPageTitle();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       {/* Dark Sidebar Only */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
       {/* Light Theme Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
         <Header title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-auto bg-slate-50 text-slate-900">
+        <main className="flex-1 overflow-y-auto bg-slate-50 text-slate-900 pb-20 lg:pb-0">
           {isDenied ? (
             <div className="p-8 max-w-xl mx-auto mt-12 text-center space-y-4">
               <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-3xl flex items-center justify-center mx-auto">
