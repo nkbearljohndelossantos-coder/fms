@@ -10,11 +10,16 @@ import companyRoutes from './routes/companies.js';
 import vendorRoutes from './routes/vendors.js';
 import materialRoutes from './routes/materials.js';
 import formulaRoutes from './routes/formulas.js';
+import batchRoutes from './routes/batches.js';
+import qrRoutes from './routes/qr.routes.js';
+import qcRoutes from './routes/qc.routes.js';
+import attachmentRoutes from './routes/attachments.routes.js';
 import perfumeConversionRoutes from './routes/perfumeConversions.js';
 import batchCalculatorRoutes from './routes/batchCalculator.js';
 import reportRoutes from './routes/reports.js';
 import settingsRoutes from './routes/settings.js';
 import auditLogRoutes from './routes/auditLogs.js';
+import { idempotencyMiddleware } from './middleware/idempotency.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,51 +29,96 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Simple Cookie Parser Middleware helper
+app.use((req, res, next) => {
+  req.cookies = {};
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      req.cookies[parts.shift().trim()] = decodeURIComponent(parts.join('='));
+    });
+  }
+  next();
+});
+
 // Security & Middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(idempotencyMiddleware());
 
 // Rate limiter for API routes
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000,
+  max: 2000,
   message: { success: false, message: 'Too many requests from this IP, please try again later.' },
 });
 app.use('/api/', apiLimiter);
 
-// API Routes (Supporting both /api/ and /api/v1/ prefixes)
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/v1/auth', authRoutes);
+
 app.use('/api/users', userRoutes);
 app.use('/api/v1/users', userRoutes);
+
 app.use('/api/companies', companyRoutes);
 app.use('/api/v1/companies', companyRoutes);
+
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/v1/vendors', vendorRoutes);
+
 app.use('/api/materials', materialRoutes);
 app.use('/api/v1/materials', materialRoutes);
+
 app.use('/api/formulas', formulaRoutes);
 app.use('/api/v1/formulas', formulaRoutes);
+
+app.use('/api/batches', batchRoutes);
+app.use('/api/v1/batches', batchRoutes);
+
+app.use('/api/qr', qrRoutes);
+app.use('/api/v1/qr', qrRoutes);
+
+app.use('/api/qc', qcRoutes);
+app.use('/api/v1/qc', qcRoutes);
+
+app.use('/api/attachments', attachmentRoutes);
+app.use('/api/v1/attachments', attachmentRoutes);
+
 app.use('/api/perfume-conversions', perfumeConversionRoutes);
 app.use('/api/v1/perfume-conversions', perfumeConversionRoutes);
+
 app.use('/api/batch-calculations', batchCalculatorRoutes);
 app.use('/api/v1/batch-calculations', batchCalculatorRoutes);
+
 app.use('/api/reports', reportRoutes);
 app.use('/api/v1/reports', reportRoutes);
+
 app.use('/api/settings', settingsRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/v1/audit-logs', auditLogRoutes);
 
-// Health Check Endpoint
+// Health and Readiness Check Endpoints
 app.get('/api/v1/health', async (req, res) => {
   try {
     await db.raw('SELECT 1');
     return res.json({ status: 'HEALTHY', timestamp: new Date().toISOString(), database: 'CONNECTED' });
   } catch (err) {
     return res.status(500).json({ status: 'UNHEALTHY', error: err.message });
+  }
+});
+
+app.get('/api/v1/ready', async (req, res) => {
+  try {
+    await db.raw('SELECT 1');
+    return res.json({ status: 'READY', timestamp: new Date().toISOString(), service: 'NKB MES Formulation System' });
+  } catch (err) {
+    return res.status(500).json({ status: 'NOT_READY', error: err.message });
   }
 });
 
@@ -87,24 +137,22 @@ app.get('*', (req, res) => {
 // Centralized Error Handler
 app.use((err, req, res, next) => {
   console.error('Unhandled Server Error:', err);
-  res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
+  const status = err.status || 500;
+  res.status(status).json({ success: false, message: err.message || 'Internal Server Error' });
 });
 
-// Auto-Run Migrations and Seeds on startup if needed
 async function initDatabase() {
   try {
-    console.log('🔄 Checking and running database migrations...');
+    console.log('Checking database migrations...');
     await db.migrate.latest();
     console.log('✅ Database migrations up to date.');
-    await db.seed.run();
-    console.log('✅ Initial database seed data loaded.');
   } catch (err) {
-    console.error('⚠️ Database initialization note:', err.message);
+    console.error('Database migration note:', err.message);
   }
 }
 
 app.listen(PORT, async () => {
-  console.log(`🚀 NKB Formulation Management System Backend running on port ${PORT}`);
+  console.log(`🚀 Enterprise Formulation & MES System Backend running on port ${PORT}`);
   await initDatabase();
 });
 

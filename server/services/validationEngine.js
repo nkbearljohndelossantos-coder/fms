@@ -15,8 +15,8 @@ export const ROLE_WORKFLOW_PERMISSIONS = {
   SUBMIT: ['Super Admin', 'Formulator'],
   RETURN: ['Super Admin', 'Reviewer'],
   ENDORSE: ['Super Admin', 'Reviewer'],
-  APPROVE: ['Super Admin', 'Approver'],
-  REJECT: ['Super Admin', 'Approver'],
+  APPROVE: ['Super Admin', 'Approver', 'Formulation Chemist'],
+  REJECT: ['Super Admin', 'Approver', 'Formulation Chemist'],
 };
 
 /**
@@ -25,9 +25,9 @@ export const ROLE_WORKFLOW_PERMISSIONS = {
  * @param {Array} materials - List of version materials with `percentage` property
  * @param {string|number} tolerance - Configured tolerance e.g. 0.01%
  */
-export function validateFormulaPercentage(materials, tolerance = '0.01') {
+export function validateFormulaPercentage(materials, tolerance = '0.010000') {
   if (!materials || materials.length === 0) {
-    return { isValid: false, totalPct: '0.00', message: 'Formula contains no material composition lines' };
+    return { isValid: false, totalPct: '0.000000', message: 'Formula contains no material composition lines' };
   }
 
   let sum = new Decimal(0);
@@ -36,33 +36,33 @@ export function validateFormulaPercentage(materials, tolerance = '0.01') {
   for (const item of materials) {
     const pct = new Decimal(item.percentage || '0');
     if (pct.isNegative()) {
-      return { isValid: false, totalPct: sum.toFixed(2), message: `Material ${item.material_name_snapshot || item.material_id} has negative percentage (${pct.toFixed(2)}%)` };
+      return { isValid: false, totalPct: sum.toFixed(6), message: `Material ${item.material_name_snapshot || item.material_id} has negative percentage (${pct.toFixed(6)}%)` };
     }
 
     if (seenMaterialIds.has(item.material_id)) {
-      return { isValid: false, totalPct: sum.toFixed(2), message: `Duplicate material ID ${item.material_id} found in formula composition` };
+      return { isValid: false, totalPct: sum.toFixed(6), message: `Duplicate material ID ${item.material_id} found in formula composition` };
     }
     seenMaterialIds.add(item.material_id);
 
     sum = sum.plus(pct);
   }
 
-  const target = new Decimal('100.00');
+  const target = new Decimal('100.000000');
   const diff = sum.minus(target).abs();
   const tol = new Decimal(tolerance);
 
   const isValid = diff.lte(tol);
-  const totalPctStr = sum.toFixed(2);
+  const totalPctStr = sum.toFixed(6);
 
   if (!isValid) {
     return {
       isValid: false,
       totalPct: totalPctStr,
-      message: `Total formula percentage is ${totalPctStr}%, which deviates from 100.00% beyond tolerance ±${tol.toFixed(2)}%`,
+      message: `Total formula percentage is ${totalPctStr}%, which deviates from 100.00% beyond tolerance ±${tol.toFixed(6)}%`,
     };
   }
 
-  return { isValid: true, totalPct: totalPctStr, message: 'Percentage validation successful (100.00%)' };
+  return { isValid: true, totalPct: totalPctStr, message: 'Percentage validation successful (100.000000%)' };
 }
 
 /**
@@ -75,7 +75,7 @@ export function assertVersionIsMutable(version) {
     throw new Error('Formula version not found');
   }
 
-  if (version.version_status === 'APPROVED' || version.version_status === 'SUPERSEDED' || version.version_status === 'REJECTED') {
+  if (version.version_status === 'APPROVED' || version.version_status === 'SUPERSEDED' || version.version_status === 'REJECTED' || version.version_status === 'LOCKED') {
     throw new Error(
       `Formula Version ${version.major_version}.${version.minor_version} is ${version.version_status} and locked as read-only. Create a new draft revision to modify.`
     );

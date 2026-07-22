@@ -8,29 +8,43 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('nkb_access_token') || null);
-  const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('nkb_refresh_token') || null);
   const [loading, setLoading] = useState(false);
 
-  const login = (userData, token, rToken) => {
+  const login = (userData, token) => {
     setUser(userData);
     setAccessToken(token);
-    setRefreshToken(rToken);
     localStorage.setItem('nkb_user', JSON.stringify(userData));
     localStorage.setItem('nkb_access_token', token);
-    localStorage.setItem('nkb_refresh_token', rToken);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      if (accessToken) {
+        await fetch('/api/v1/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+      }
+    } catch (e) {
+      // ignore logout fetch failure
+    }
     setUser(null);
     setAccessToken(null);
-    setRefreshToken(null);
     localStorage.removeItem('nkb_user');
     localStorage.removeItem('nkb_access_token');
-    localStorage.removeItem('nkb_refresh_token');
+  };
+
+  const hasPermission = (permKey) => {
+    if (!user) return false;
+    if (user.role === 'Super Admin' || user.roles?.includes('Super Admin')) return true;
+    return Boolean(user.permissions?.includes(permKey));
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, refreshToken, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, accessToken, login, logout, loading, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

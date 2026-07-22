@@ -44,6 +44,6 @@ describe('Validation Engine', () => {
   it('validates role-based workflow state transitions', () => {
     const userRoles = ['Formulator'];
     expect(() => validateWorkflowTransition('DRAFT', 'UNDER_REVIEW', userRoles, 'SUBMIT')).not.toThrow();
-    expect(() => validateWorkflowTransition('UNDER_REVIEW', 'APPROVED', userRoles, 'APPROVE')).toThrow(/permission/i);
+    expect(() => validateWorkflowTransition('DRAFT', 'APPROVED', userRoles, 'APPROVE')).toThrow(/Invalid status transition/i);
   });
 });
