@@ -54,6 +54,78 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/v1/materials/bulk - Bulk Import/Upload/Update Materials
+router.post('/bulk', authenticateToken, async (req, res) => {
+  try {
+    const { materials } = req.body;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid materials list.' });
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    await db.transaction(async (trx) => {
+      for (const m of materials) {
+        if (!m.code || !m.name) continue;
+
+        // Clean values
+        const payload = {
+          code: String(m.code).trim(),
+          name: String(m.name).trim(),
+          description: m.description ? String(m.description).trim() : null,
+          uom_category: m.uom_category ? String(m.uom_category).trim() : 'MASS',
+          default_uom: m.default_uom ? String(m.default_uom).trim() : 'g',
+          cost: m.cost && !isNaN(Number(m.cost)) ? Number(m.cost) : 0,
+          currency_code: m.currency_code ? String(m.currency_code).trim() : 'PHP',
+          density_kg_per_l: (m.density_kg_per_l !== null && m.density_kg_per_l !== undefined && !isNaN(Number(m.density_kg_per_l))) ? Number(m.density_kg_per_l) : null,
+          specific_gravity: (m.specific_gravity !== null && m.specific_gravity !== undefined && !isNaN(Number(m.specific_gravity))) ? Number(m.specific_gravity) : null,
+          is_active: m.is_active !== undefined ? Boolean(m.is_active) : true,
+          updated_at: trx.fn.now(),
+        };
+
+        const existing = await trx('materials').where({ code: payload.code }).first();
+        if (existing) {
+          const oldCost = Number(existing.cost || 0);
+          const newCost = Number(payload.cost || 0);
+          if (oldCost !== newCost) {
+            await trx('material_cost_history').insert({
+              material_id: existing.id,
+              previous_cost: oldCost,
+              new_cost: newCost,
+              currency_code: payload.currency_code,
+              changed_by_user_id: req.user.id,
+              notes: 'Bulk import update',
+            });
+          }
+
+          await trx('materials').where({ id: existing.id }).update(payload);
+          updated++;
+        } else {
+          payload.created_at = trx.fn.now();
+          const [newId] = await trx('materials').insert(payload).then(res => [res[0]]);
+          
+          await trx('material_cost_history').insert({
+            material_id: newId,
+            previous_cost: 0,
+            new_cost: payload.cost,
+            currency_code: payload.currency_code,
+            changed_by_user_id: req.user.id,
+            notes: 'Bulk import initial cost',
+          });
+
+          inserted++;
+        }
+      }
+    });
+
+    return res.json({ success: true, message: `Successfully imported ${inserted} new and updated ${updated} existing materials.`, data: { inserted, updated } });
+  } catch (err) {
+    console.error('Bulk upload error:', err);
+    return res.status(500).json({ success: false, message: 'Bulk upload failed.', error: err.message });
+  }
+});
+
 // GET /api/v1/materials/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
