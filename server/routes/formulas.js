@@ -631,6 +631,116 @@ router.post('/versions/:versionId/workflow', authenticateToken, async (req, res)
 
         const costingResult = calculateFormulaCosting(materials, version.target_batch_size);
         await saveFormulaCostSnapshot(trx, versionId, costingResult);
+
+        // AUTOMATICALLY CREATE PRODUCTION BATCH ON APPROVAL
+        const batchNumber = await SequenceService.getNextSequence('BATCH_NUMBER', trx);
+        const batchSizeDec = new Decimal(version.target_batch_size || '100.000000');
+
+        const phases = await trx('formula_phases').where({ version_id: versionId }).orderBy('phase_order', 'asc');
+        const versionMaterials = await trx('formula_version_materials').where({ version_id: versionId }).orderBy('addition_order', 'asc');
+        let versionInstructions = await trx('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
+
+        if (versionInstructions.length === 0) {
+          versionInstructions = versionMaterials.map((m, idx) => ({
+            id: `virtual-${m.id}`,
+            phase_id: m.phase_id,
+            material_id: m.material_id,
+            step_number: idx + 1,
+            instruction_text: `Weigh and add ${m.material_name_snapshot} (${m.percentage}% w/w) to the mix. Temp: ${m.temp_c || 'N/A'}°C, Mixing Speed: ${m.mixing_speed_rpm || 'N/A'} RPM, Duration: ${m.duration_min || 'N/A'} min.`,
+          }));
+        }
+
+        const snapshotPayload = JSON.stringify({
+          formulaCode: formula.code,
+          version: `${version.major_version}.${version.minor_version}`,
+          targetBatchSize: batchSizeDec.toFixed(6),
+          materials: versionMaterials.map(m => ({ code: m.material_code_snapshot, pct: m.percentage })),
+          instructions: versionInstructions.map(i => i.instruction_text),
+        });
+        const snapshotHash = crypto.createHash('sha256').update(snapshotPayload).digest('hex');
+
+        const [batchId] = await trx('production_batches').insert({
+          batch_number: batchNumber,
+          formula_id: formula.id,
+          formula_version_id: version.id,
+          category: formula.product_category,
+          status: 'Assigned',
+          target_batch_size: batchSizeDec.toFixed(6),
+          snapshot_hash: snapshotHash,
+          lock_version: 1,
+          assigned_operator_id: null,
+          assigned_machine_id: null,
+          created_by: req.user.id,
+        }).then(r => [r[0]]);
+
+        const phaseIdMap = {};
+        for (const p of phases) {
+          const [bpId] = await trx('batch_phases').insert({
+            batch_id: batchId,
+            phase_letter: String.fromCharCode(64 + p.phase_order),
+            phase_name: p.phase_name,
+            sequence: p.phase_order,
+            status: 'Waiting',
+          }).then(r => [r[0]]);
+          phaseIdMap[p.id] = bpId;
+        }
+
+        for (let i = 0; i < versionInstructions.length; i++) {
+          const inst = versionInstructions[i];
+          const bpId = phaseIdMap[inst.phase_id] || (Object.values(phaseIdMap)[0] || null);
+
+          const [bsId] = await trx('batch_steps').insert({
+            batch_id: batchId,
+            batch_phase_id: bpId,
+            step_number: inst.step_number || (i + 1),
+            instructions: inst.instruction_text,
+            status: 'Pending',
+            lock_version: 1,
+          }).then(r => [r[0]]);
+
+          const mat = versionMaterials.find(m => m.id === inst.material_id || m.material_id === inst.material_id) || versionMaterials[i];
+          if (mat) {
+            const pctDec = new Decimal(mat.percentage || '0');
+            const targetWeightDec = pctDec.div(100).times(batchSizeDec);
+            const tolPctDec = new Decimal(mat.tolerance_percent || '1.000000');
+            const tolWeight = targetWeightDec.times(tolPctDec.div(100));
+
+            await trx('batch_material_requirements').insert({
+              batch_id: batchId,
+              step_id: bsId,
+              material_id: mat.material_id,
+              material_code: mat.material_code_snapshot,
+              material_name: mat.material_name_snapshot,
+              percentage: pctDec.toFixed(6),
+              target_weight: targetWeightDec.toFixed(6),
+              tolerance_percent: tolPctDec.toFixed(6),
+              min_weight: targetWeightDec.minus(tolWeight).toFixed(6),
+              max_weight: targetWeightDec.plus(tolWeight).toFixed(6),
+            });
+          }
+        }
+
+        const rawQrToken = crypto.randomBytes(32).toString('hex');
+        const qrHash = crypto.createHash('sha256').update(rawQrToken).digest('hex');
+        const qrExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        await trx('qr_tokens').insert({
+          token_hash: qrHash,
+          batch_id: batchId,
+          formula_version_id: version.id,
+          is_single_use: false,
+          expires_at: qrExpiresAt,
+        });
+
+        await AuditService.logEvent({
+          trx,
+          userId: req.user.id,
+          userRole: req.user.roles[0] || 'User',
+          action: 'CREATE_PRODUCTION_BATCH',
+          entityType: 'ProductionBatch',
+          entityId: batchId,
+          newValues: { batchNumber, targetBatchSize: batchSizeDec.toFixed(6), snapshotHash },
+        });
       }
 
       await trx('formula_versions').where({ id: versionId }).update(updatePayload);
@@ -685,7 +795,17 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
 
     const phases = await db('formula_phases').where({ version_id: versionId }).orderBy('phase_order', 'asc');
     const materials = await db('formula_version_materials').where({ version_id: versionId }).orderBy('addition_order', 'asc');
-    const instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
+    let instructions = await db('formula_instructions').where({ version_id: versionId }).orderBy('step_number', 'asc');
+
+    if (instructions.length === 0) {
+      instructions = materials.map((m, idx) => ({
+        id: `virtual-${m.id}`,
+        phase_id: m.phase_id,
+        material_id: m.material_id,
+        step_number: idx + 1,
+        instruction_text: `Weigh and add ${m.material_name_snapshot} (${m.percentage}% w/w) to the mix. Temp: ${m.temp_c || 'N/A'}°C, Mixing Speed: ${m.mixing_speed_rpm || 'N/A'} RPM, Duration: ${m.duration_min || 'N/A'} min.`,
+      }));
+    }
 
     const result = await db.transaction(async (trx) => {
       const batchNumber = await SequenceService.getNextSequence('BATCH_NUMBER', trx);
@@ -738,7 +858,7 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
           lock_version: 1,
         }).then(r => [r[0]]);
 
-        const mat = materials.find(m => m.id === inst.material_id) || materials[i];
+        const mat = materials.find(m => m.id === inst.material_id || m.material_id === inst.material_id) || materials[i];
         if (mat) {
           const pctDec = new Decimal(mat.percentage || '0');
           const targetWeightDec = pctDec.div(100).times(batchSizeDec);
