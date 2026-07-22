@@ -39,12 +39,33 @@ function calculateFormulaCosting(materials, targetBatchSize = '100.000000') {
 }
 
 async function saveFormulaCostSnapshot(trx, versionId, costingResult) {
-  await trx('formula_cost_snapshots').insert({
+  const [snapshotId] = await trx('formula_cost_snapshots').insert({
     version_id: versionId,
-    snapshot_data: JSON.stringify(costingResult),
-    total_cost: costingResult.totalBatchCost,
-    unit_cost: costingResult.costPerKg,
-  });
+    raw_material_cost: costingResult.totalBatchCost || '0.000000',
+    process_loss_pct: '0.000000',
+    packaging_cost: '0.000000',
+    labor_cost: '0.000000',
+    overhead_cost: '0.000000',
+    total_cost: costingResult.totalBatchCost || '0.000000',
+    cost_per_unit: costingResult.costPerKg || '0.000000',
+    currency_code: 'PHP',
+  }).then(res => [res[0]]);
+
+  if (Array.isArray(costingResult.lineCosts) && costingResult.lineCosts.length > 0) {
+    const insertItems = costingResult.lineCosts.map(item => ({
+      snapshot_id: snapshotId,
+      material_id: item.material_id,
+      material_code_snapshot: item.material_code || 'MAT',
+      material_name_snapshot: item.material_name || 'Material',
+      percentage: item.percentage || '0.000000',
+      quantity: item.required_weight || '0.000000',
+      uom: 'g',
+      cost_per_uom: item.cost_per_kg || '0.000000',
+      line_cost: item.line_cost || '0.000000',
+      currency_code: 'PHP',
+    }));
+    await trx('formula_cost_snapshot_items').insert(insertItems);
+  }
 }
 
 // 1. GET /api/v1/formulas
