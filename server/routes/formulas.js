@@ -80,7 +80,9 @@ router.get('/', authenticateToken, async (req, res) => {
         active_version_id: activeVer?.id || null,
         versions: fVersions.map(v => ({
           id: v.id,
-          version: `${v.major_version}.${v.minor_version}`,
+          version: v.version_code || `V${v.major_version ?? 1}.${v.minor_version ?? 0}`,
+          major_version: v.major_version ?? 1,
+          minor_version: v.minor_version ?? 0,
           version_status: v.version_status,
           target_batch_size: v.target_batch_size,
           created_at: v.created_at,
@@ -94,7 +96,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// 2. GET /api/v1/formulas/versions/:versionId (SAFE FIELD SELECTION)
+// 2. GET /api/v1/formulas/versions/:versionId
 router.get('/versions/:versionId', authenticateToken, async (req, res) => {
   try {
     const { versionId } = req.params;
@@ -169,7 +171,7 @@ router.get('/:id/revisions', authenticateToken, async (req, res) => {
   }
 });
 
-// 4. POST /api/v1/formulas/:id/revisions
+// 4. POST /api/v1/formulas/:id/revisions (SAFE FIELD MAPPING FOR MYSQL & SQLITE)
 router.post('/:id/revisions', authenticateToken, async (req, res) => {
   try {
     const formulaId = req.params.id;
@@ -212,22 +214,51 @@ router.post('/:id/revisions', authenticateToken, async (req, res) => {
       const [newVersionId] = await trx('formula_versions').insert(insertVer).then(r => [r[0]]);
 
       if (sourceVersionId) {
+        // 1. Copy materials
         const oldMats = await trx('formula_version_materials').where({ version_id: sourceVersionId });
         for (const m of oldMats) {
+          const { id, version_id, created_at, updated_at, ...matData } = m;
           await trx('formula_version_materials').insert({
+            ...matData,
             version_id: newVersionId,
-            material_id: m.material_id,
-            material_code_snapshot: m.material_code_snapshot,
-            material_name_snapshot: m.material_name_snapshot,
-            percentage: m.percentage,
-            phase_name: m.phase_name,
-            addition_order: m.addition_order,
-            mixing_speed_rpm: m.mixing_speed_rpm,
-            temperature_celsius: m.temperature_celsius,
-            mixing_time_minutes: m.mixing_time_minutes,
-            tolerance_percent: m.tolerance_percent,
-            quality_grade_required: m.quality_grade_required,
-            notes: m.notes,
+          });
+        }
+
+        // 2. Copy phases
+        const oldPhases = await trx('formula_phases').where({ version_id: sourceVersionId });
+        for (const p of oldPhases) {
+          const { id, version_id, created_at, updated_at, ...phaseData } = p;
+          await trx('formula_phases').insert({
+            ...phaseData,
+            version_id: newVersionId,
+          });
+        }
+
+        // 3. Copy category details
+        const oldCosmetic = await trx('cosmetic_formula_details').where({ version_id: sourceVersionId }).first();
+        if (oldCosmetic) {
+          const { id, version_id, created_at, updated_at, ...cosData } = oldCosmetic;
+          await trx('cosmetic_formula_details').insert({
+            ...cosData,
+            version_id: newVersionId,
+          });
+        }
+
+        const oldPerfume = await trx('perfume_formula_details').where({ version_id: sourceVersionId }).first();
+        if (oldPerfume) {
+          const { id, version_id, created_at, updated_at, ...perfData } = oldPerfume;
+          await trx('perfume_formula_details').insert({
+            ...perfData,
+            version_id: newVersionId,
+          });
+        }
+
+        const oldSupplement = await trx('supplement_formula_details').where({ version_id: sourceVersionId }).first();
+        if (oldSupplement) {
+          const { id, version_id, created_at, updated_at, ...suppData } = oldSupplement;
+          await trx('supplement_formula_details').insert({
+            ...suppData,
+            version_id: newVersionId,
           });
         }
       }
@@ -286,7 +317,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 6. POST /api/v1/formulas (Create master formula & initial v1.0 draft)
+// 6. POST /api/v1/formulas
 router.post('/', authenticateToken, requirePermission('formula.create'), async (req, res) => {
   try {
     const { name, category, formula_type, product_category, reference_batch_size, batchSize = '100.000000', batchUom = 'kg', revisionReason = 'Initial creation' } = req.body;
