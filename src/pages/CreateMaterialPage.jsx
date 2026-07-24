@@ -299,6 +299,11 @@ export function CreateMaterialPage({ setCurrentPage }) {
               className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-xs text-slate-900 font-bold focus:outline-none focus:border-blue-600"
             >
               <option value="g">g (Gram)</option>
+              <option value="kg">kg (Kilogram)</option>
+              <option value="mg">mg (Milligram)</option>
+              <option value="mL">mL (Milliliter)</option>
+              <option value="L">L (Liter)</option>
+              <option value="pieces">pieces (Pcs)</option>
             </select>
           </div>
 

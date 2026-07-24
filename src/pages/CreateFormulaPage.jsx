@@ -64,7 +64,7 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
           product_subcategory: formData.product_subcategory,
           brand_type: formData.brand_type,
           reference_batch_size: formData.reference_batch_size,
-          reference_batch_uom: 'g',
+          reference_batch_uom: formData.reference_batch_uom || 'g',
           revision_reason: formData.revision_reason,
         }),
       });
@@ -208,10 +208,10 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
               />
             </div>
 
-            {/* Target Batch Size (LOCKED TO GRAMS) */}
+            {/* Target Batch Size */}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Default Target Batch Size (Grams)
+                Default Target Batch Size
               </label>
               <div className="flex gap-2">
                 <input
@@ -223,9 +223,16 @@ export function CreateFormulaPage({ setCurrentPage, onFormulaCreated }) {
                   onChange={(e) => handleChange('reference_batch_size', e.target.value)}
                   className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
                 />
-                <div className="w-16 bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-700 flex items-center justify-center shrink-0">
-                  g
-                </div>
+                <select
+                  value={formData.reference_batch_uom}
+                  onChange={(e) => handleChange('reference_batch_uom', e.target.value)}
+                  className="w-24 bg-slate-100 border border-slate-300 rounded-lg px-2 py-2 text-sm font-mono font-bold text-slate-700 outline-none shrink-0"
+                >
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="mL">mL</option>
+                  <option value="L">L</option>
+                </select>
               </div>
             </div>
 
