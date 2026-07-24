@@ -95,15 +95,10 @@ export async function seed(knex) {
   const reviewerUserId = userMap['supervisor@nkb.com'] || userMap['reviewer@nkb.com'];
   const approverUserId = userMap['chemist2@nkb.com'] || userMap['approver@nkb.com'];
 
-  // 3. Companies & Vendors
+  // 3. Companies
   const [c1, c2] = await Promise.all([
     knex('companies').insert({ code: 'NKB-LAB', name: 'NKB Laboratories Inc.', contact_person: 'John Doe', email: 'lab@nkb.com', phone: '+63 2 8123 4567' }).then(res => res[0] || 1),
     knex('companies').insert({ code: 'COS-TECH', name: 'CosmeTech Innovations', contact_person: 'Jane Smith', email: 'contact@cosmetech.com' }).then(res => res[0] || 2),
-  ]);
-
-  const [v1, v3] = await Promise.all([
-    knex('vendors').insert({ code: 'V-CHEM', name: 'Global Chem Supplies', contact_person: 'Robert Chen', email: 'sales@globalchem.com' }).then(res => res[0] || 1),
-    knex('vendors').insert({ code: 'V-BIOEXT', name: 'BioExtracts Organics', contact_person: 'David Miller', email: 'dmiller@bioextracts.com' }).then(res => res[0] || 3),
   ]);
 
   // 4. System Settings
@@ -118,12 +113,12 @@ export async function seed(knex) {
 
   // 5. Seed Cosmetic Raw Materials (Default UOM: g)
   const rawMaterials = [
-    { code: 'MAT-WTR-001', name: 'Deionized Water', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.012500', currency_code: 'PHP', density_kg_per_l: '1.000000', specific_gravity: '1.000000', description: 'Pure deionized water', is_inventoried: true },
-    { code: 'MAT-GLY-002', name: 'Glycerin USP', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.185000', currency_code: 'PHP', density_kg_per_l: '1.261000', specific_gravity: '1.261000', description: 'Humectant and skin protectant', is_inventoried: true },
-    { code: 'MAT-SLES-003', name: 'Sodium Lauryl Ether Sulfate (SLES 70%)', company_id: c2, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.240000', currency_code: 'PHP', density_kg_per_l: '1.050000', specific_gravity: '1.050000', description: 'Primary anionic surfactant', is_inventoried: true },
-    { code: 'MAT-CAPB-004', name: 'Cocamidopropyl Betaine (CAPB)', company_id: c2, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.210000', currency_code: 'PHP', density_kg_per_l: '1.040000', specific_gravity: '1.040000', description: 'Amphoteric secondary surfactant', is_inventoried: true },
-    { code: 'MAT-NIAC-005', name: 'Niacinamide (Vitamin B3)', company_id: c1, vendor_id: v3, uom: 'g', uom_category: 'MASS', cost: '1.850000', currency_code: 'PHP', density_kg_per_l: '1.200000', specific_gravity: '1.200000', description: 'Brightening active ingredient', is_inventoried: false },
-    { code: 'MAT-PHENOX-006', name: 'Phenoxyethanol Preservative', company_id: c1, vendor_id: v1, uom: 'g', uom_category: 'MASS', cost: '0.650000', currency_code: 'PHP', density_kg_per_l: '1.107000', specific_gravity: '1.107000', description: 'Broad-spectrum preservative', is_inventoried: true },
+    { code: 'MAT-WTR-001', name: 'Deionized Water', company_id: c1, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '0.012500', currency_code: 'PHP', density_kg_per_l: '1.000000', specific_gravity: '1.000000', description: 'Pure deionized water', is_inventoried: true },
+    { code: 'MAT-GLY-002', name: 'Glycerin USP', company_id: c1, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '0.185000', currency_code: 'PHP', density_kg_per_l: '1.261000', specific_gravity: '1.261000', description: 'Humectant and skin protectant', is_inventoried: true },
+    { code: 'MAT-SLES-003', name: 'Sodium Lauryl Ether Sulfate (SLES 70%)', company_id: c2, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '0.240000', currency_code: 'PHP', density_kg_per_l: '1.050000', specific_gravity: '1.050000', description: 'Primary anionic surfactant', is_inventoried: true },
+    { code: 'MAT-CAPB-004', name: 'Cocamidopropyl Betaine (CAPB)', company_id: c2, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '0.210000', currency_code: 'PHP', density_kg_per_l: '1.040000', specific_gravity: '1.040000', description: 'Amphoteric secondary surfactant', is_inventoried: true },
+    { code: 'MAT-NIAC-005', name: 'Niacinamide (Vitamin B3)', company_id: c1, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '1.850000', currency_code: 'PHP', density_kg_per_l: '1.200000', specific_gravity: '1.200000', description: 'Brightening active ingredient', is_inventoried: false },
+    { code: 'MAT-PHENOX-006', name: 'Phenoxyethanol Preservative', company_id: c1, vendor_id: null, uom: 'g', uom_category: 'MASS', cost: '0.650000', currency_code: 'PHP', density_kg_per_l: '1.107000', specific_gravity: '1.107000', description: 'Broad-spectrum preservative', is_inventoried: true },
   ];
 
   const materialMap = {};
