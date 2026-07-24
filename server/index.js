@@ -127,8 +127,10 @@ app.get('/api/v1/ready', async (req, res) => {
   }
 });
 
-// Serve favicon.ico explicitly to prevent browser 403 or fallback errors
+// Serve favicon.ico explicitly with open headers to prevent 403 / CORS errors
 app.get('/favicon.ico', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   const distFaviconPath = path.join(__dirname, '../dist/favicon.ico');
   const publicFaviconPath = path.join(__dirname, '../public/favicon.ico');
   if (fs.existsSync(distFaviconPath)) {
