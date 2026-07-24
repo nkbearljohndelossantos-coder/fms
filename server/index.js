@@ -127,6 +127,19 @@ app.get('/api/v1/ready', async (req, res) => {
   }
 });
 
+// Serve favicon.ico explicitly to prevent browser 403 or fallback errors
+app.get('/favicon.ico', (req, res) => {
+  const distFaviconPath = path.join(__dirname, '../dist/favicon.ico');
+  const publicFaviconPath = path.join(__dirname, '../public/favicon.ico');
+  if (fs.existsSync(distFaviconPath)) {
+    return res.sendFile(distFaviconPath);
+  }
+  if (fs.existsSync(publicFaviconPath)) {
+    return res.sendFile(publicFaviconPath);
+  }
+  return res.status(204).end();
+});
+
 // Single Process Production Static File Serving for compiled React SPA
 const clientDistPath = path.join(__dirname, '../dist');
 const clientPublicPath = path.join(__dirname, '../public');
