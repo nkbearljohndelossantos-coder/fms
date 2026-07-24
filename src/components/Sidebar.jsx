@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   Users,
   Settings,
+  Building,
   Building2,
   ChevronDown,
   ChevronRight,
@@ -179,6 +180,17 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     >
                       <Building2 className="w-3.5 h-3.5 text-slate-400" />
                       <span>Create Vendor</span>
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage('create-company')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-xs ${
+                        isCurrent('create-company')
+                          ? 'bg-slate-800 text-blue-400 font-semibold'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <Building className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Create Company</span>
                     </button>
                   </div>
                 )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Filter, History, CheckCircle2, Download, Upload, FileSpreadsheet, Building2 } from 'lucide-react';
+import { Search, Plus, Filter, History, CheckCircle2, Download, Upload, FileSpreadsheet, Building2, Building } from 'lucide-react';
 import { apiFetch } from '../services/api';
 
 export function MaterialsListPage({ setCurrentPage }) {
@@ -245,6 +245,14 @@ export function MaterialsListPage({ setCurrentPage }) {
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 transition"
           >
             <Building2 className="w-3.5 h-3.5" /> Create Vendor
+          </button>
+
+          {/* Create Company */}
+          <button
+            onClick={() => setCurrentPage('create-company')}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 transition"
+          >
+            <Building className="w-3.5 h-3.5" /> Create Company
           </button>
 
           {/* Create Material manually */}

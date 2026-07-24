@@ -18,7 +18,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/companies - Create company reference
-router.post('/', authenticateToken, requireRoles('Super Admin', 'Formulator'), async (req, res) => {
+router.post('/', authenticateToken, requireRoles('Super Admin', 'Formulator', 'Formulation Chemist', 'Production Supervisor'), async (req, res) => {
   try {
     const { code, name, contactPerson, email, phone } = req.body;
     if (!code || !name) {
@@ -40,9 +40,29 @@ router.post('/', authenticateToken, requireRoles('Super Admin', 'Formulator'), a
     }).then(res => [res[0]]);
 
     await logAudit(req, 'CREATE_COMPANY', 'Company', id, null, { code, name });
-    return res.status(201).json({ success: true, message: 'Company reference created.', companyId: id });
+    return res.status(201).json({ success: true, message: 'Company reference created.', companyId: id, company: { id, code, name, contact_person: contactPerson, email, phone } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to create company.', error: err.message });
+  }
+});
+
+// DELETE /api/v1/companies/:id - Delete company reference
+router.delete('/:id', authenticateToken, requireRoles('Super Admin', 'Formulator', 'Formulation Chemist', 'Production Supervisor'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await db('companies').where({ id }).first();
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Company not found.' });
+    }
+
+    // Set materials with this company_id to null
+    await db('materials').where({ company_id: id }).update({ company_id: null });
+    await db('companies').where({ id }).del();
+
+    await logAudit(req, 'DELETE_COMPANY', 'Company', id, company, null);
+    return res.json({ success: true, message: `Company '${company.name}' deleted successfully.` });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to delete company.', error: err.message });
   }
 });
 

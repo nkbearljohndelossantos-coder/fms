@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Save, ArrowLeft, Info, Plus, Building2, X, RefreshCw } from 'lucide-react';
+import { Save, ArrowLeft, Info, Plus, Building2, Building, X, RefreshCw } from 'lucide-react';
 import { apiFetch } from '../services/api';
 
 export function CreateMaterialPage({ setCurrentPage }) {
@@ -30,6 +30,18 @@ export function CreateMaterialPage({ setCurrentPage }) {
   const [vendorError, setVendorError] = useState('');
   const [newVendor, setNewVendor] = useState({ code: '', name: '', contactPerson: '', email: '', phone: '' });
 
+  // Quick Create Company Modal state
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companyError, setCompanyError] = useState('');
+  const [newCompany, setNewCompany] = useState({ code: '', name: '', contactPerson: '', email: '', phone: '' });
+
+  const fetchCompanies = () => {
+    apiFetch('/api/v1/companies')
+      .then(res => res.json())
+      .then(d => d.success && setCompanies(d.data));
+  };
+
   const fetchVendors = () => {
     apiFetch('/api/v1/vendors')
       .then(res => res.json())
@@ -37,12 +49,50 @@ export function CreateMaterialPage({ setCurrentPage }) {
   };
 
   useEffect(() => {
-    apiFetch('/api/v1/companies')
-      .then(res => res.json())
-      .then(d => d.success && setCompanies(d.data));
-
+    fetchCompanies();
     fetchVendors();
   }, []);
+
+  const openQuickCompanyModal = () => {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    setNewCompany({ code: `COMP-${randomNum}`, name: '', contactPerson: '', email: '', phone: '' });
+    setCompanyError('');
+    setShowCompanyModal(true);
+  };
+
+  const handleQuickCreateCompany = (e) => {
+    e.preventDefault();
+    if (!newCompany.code.trim() || !newCompany.name.trim()) {
+      setCompanyError('Company Code and Name are required.');
+      return;
+    }
+
+    setCompanySaving(true);
+    setCompanyError('');
+
+    apiFetch('/api/v1/companies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCompany),
+    })
+      .then(res => res.json())
+      .then(data => {
+        setCompanySaving(false);
+        if (data.success) {
+          setShowCompanyModal(false);
+          fetchCompanies();
+          if (data.companyId || data.company?.id) {
+            setFormData(prev => ({ ...prev, companyId: String(data.companyId || data.company.id) }));
+          }
+        } else {
+          setCompanyError(data.message || 'Failed to create company.');
+        }
+      })
+      .catch(err => {
+        setCompanySaving(false);
+        setCompanyError(err.message);
+      });
+  };
 
   const openQuickVendorModal = () => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
@@ -192,7 +242,16 @@ export function CreateMaterialPage({ setCurrentPage }) {
 
           {/* Company Dropdown Reference */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Company (Reference)</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700">Company (Reference)</label>
+              <button
+                type="button"
+                onClick={openQuickCompanyModal}
+                className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition"
+              >
+                <Plus className="w-3 h-3" /> Quick Add Company
+              </button>
+            </div>
             <select
               value={formData.companyId}
               onChange={e => setFormData({ ...formData, companyId: e.target.value })}
@@ -438,6 +497,110 @@ export function CreateMaterialPage({ setCurrentPage }) {
                   className="w-1/2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition disabled:opacity-50"
                 >
                   <Save className="w-3.5 h-3.5" /> {vendorSaving ? 'Saving...' : 'Save Vendor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Create Company Modal */}
+      {showCompanyModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md border border-slate-200 shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Building className="w-4 h-4 text-blue-600" /> Quick Add New Company
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCompanyModal(false)}
+                className="text-slate-400 hover:text-slate-700 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {companyError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 font-medium">
+                {companyError}
+              </div>
+            )}
+
+            <form onSubmit={handleQuickCreateCompany} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Company Code <span className="text-rose-600">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. NKB-MC"
+                    value={newCompany.code}
+                    onChange={e => setNewCompany({ ...newCompany, code: e.target.value.toUpperCase() })}
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-blue-700 focus:outline-none focus:border-blue-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNewCompany({ ...newCompany, code: `COMP-${Math.floor(1000 + Math.random() * 9000)}` })}
+                    className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-medium border border-slate-300 flex items-center gap-1 transition"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Company Name <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. NKB Manufacturing Corp."
+                  value={newCompany.name}
+                  onChange={e => setNewCompany({ ...newCompany, name: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Juan dela Cruz"
+                  value={newCompany.contactPerson}
+                  onChange={e => setNewCompany({ ...newCompany, contactPerson: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  placeholder="e.g. info@company.com"
+                  value={newCompany.email}
+                  onChange={e => setNewCompany({ ...newCompany, email: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCompanyModal(false)}
+                  className="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={companySaving}
+                  className="w-1/2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" /> {companySaving ? 'Saving...' : 'Save Company'}
                 </button>
               </div>
             </form>

@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { MaterialsListPage } from './pages/MaterialsListPage';
 import { CreateMaterialPage } from './pages/CreateMaterialPage';
 import { CreateVendorPage } from './pages/CreateVendorPage';
+import { CreateCompanyPage } from './pages/CreateCompanyPage';
 import { CosmeticFormulatorPage } from './pages/CosmeticFormulatorPage';
 import { PerfumeNoBrandPage } from './pages/PerfumeNoBrandPage';
 import { PerfumeBrandPage } from './pages/PerfumeBrandPage';
@@ -70,6 +71,7 @@ export function App() {
       case 'materials-list': return { title: 'Material Master List', subtitle: 'Raw Material Ingredients' };
       case 'create-material': return { title: 'Create Material', subtitle: 'New Master Ingredient Entry' };
       case 'create-vendor': return { title: 'Create Vendor', subtitle: 'Master Vendor & Supplier Registration' };
+      case 'create-company': return { title: 'Create Company', subtitle: 'Master Company & Entity Registration' };
       case 'create-formula': return { title: 'Create Formula', subtitle: 'New Master Formulation Entry' };
       case 'formulation-cosmetic': return { title: 'Cosmetic Formulation', subtitle: 'Phase A-C, pH & Viscosity Specs' };
       case 'formulation-perfume-no-brand': return { title: 'Perfume – No Brand', subtitle: 'Generic Base & Maceration Controls' };
@@ -124,6 +126,7 @@ export function App() {
               {currentPage === 'materials-list' && <MaterialsListPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'create-material' && <CreateMaterialPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'create-vendor' && <CreateVendorPage setCurrentPage={setCurrentPage} />}
+              {currentPage === 'create-company' && <CreateCompanyPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'create-formula' && <CreateFormulaPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'formulation-cosmetic' && <CosmeticFormulatorPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'formulation-perfume-no-brand' && <PerfumeNoBrandPage setCurrentPage={setCurrentPage} />}
