@@ -190,7 +190,7 @@ router.get('/:id/cost-history', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/materials - Create Material (Matches exact requested fields)
-router.post('/', authenticateToken, requireRoles('Super Admin', 'Formulator'), async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
       name,
@@ -274,7 +274,7 @@ router.post('/', authenticateToken, requireRoles('Super Admin', 'Formulator'), a
 });
 
 // PUT /api/v1/materials/:id - Edit Material (Tracks cost history automatically)
-router.put('/:id', authenticateToken, requireRoles('Super Admin', 'Formulator', 'Formulation Chemist', 'Production Supervisor', 'QC Specialist'), async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const existing = await db('materials').where({ id }).first();

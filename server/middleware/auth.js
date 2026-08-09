@@ -7,7 +7,9 @@ const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'nkb_access_super_sec
  * Role equivalency map to ensure seamless backward compatibility between legacy and enterprise roles
  */
 const ROLE_ALIASES = {
-  'Formulator': ['Formulation Chemist'],
+  'Admin': ['Super Admin', 'Admin', 'Formulator', 'Formulation Chemist', 'Production Supervisor', 'QC Specialist'],
+  'Administrator': ['Super Admin', 'Admin', 'Formulator', 'Formulation Chemist', 'Production Supervisor', 'QC Specialist'],
+  'Formulator': ['Formulation Chemist', 'Formulator'],
   'Formulation Chemist': ['Formulator'],
   'Reviewer': ['Formulation Chemist', 'Production Supervisor'],
   'Approver': ['Formulation Chemist', 'Production Supervisor', 'QC Specialist'],
