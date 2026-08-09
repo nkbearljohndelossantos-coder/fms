@@ -84,7 +84,7 @@ function showCopySelectorModal(onConfirm) {
   };
 }
 
-export async function printProductionSheet({ version, formula, materials, categoryDetails, user, copies: requestedCopies }) {
+export async function printProductionSheet({ version, formula, materials, categoryDetails, user, copies: requestedCopies, layoutConfig }) {
   if (!version) {
     alert('Invalid formula version selected.');
     return;
@@ -93,7 +93,7 @@ export async function printProductionSheet({ version, formula, materials, catego
   // If copy count hasn't been set by user, show the in-app copy selector modal first!
   if (typeof requestedCopies !== 'number' || requestedCopies < 1) {
     showCopySelectorModal((selectedCopies) => {
-      printProductionSheet({ version, formula, materials, categoryDetails, user, copies: selectedCopies });
+      printProductionSheet({ version, formula, materials, categoryDetails, user, copies: selectedCopies, layoutConfig });
     });
     return;
   }
@@ -194,13 +194,32 @@ export async function printProductionSheet({ version, formula, materials, catego
     });
   }
 
+  let activeLayout = layoutConfig;
+  const sheetCompoundingCode = version?.compounding_code || version?.compounding_number || (formula?.code ? `CP-${formula.code.replace(/[^0-9]/g, '')}` : 'CP-0001');
+  if (!activeLayout && typeof localStorage !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(`nkb_sheet_layout_${sheetCompoundingCode}`);
+      if (cached) activeLayout = JSON.parse(cached);
+    } catch (_) {}
+  }
+
+  const qWidth = activeLayout?.columnWidths?.quantity || 20;
+  const rWidth = activeLayout?.columnWidths?.rawMaterial || 50;
+  const lWidth = activeLayout?.columnWidths?.lotNo || 30;
+  const customRowHeights = activeLayout?.rowHeights?.rows || {};
+
+  const getRowHeightStyle = (rowId) => {
+    const h = customRowHeights[rowId];
+    return h ? `style="height: ${h}px;"` : '';
+  };
+
   let tableRowsHtml = '';
 
   const phaseKeys = Object.keys(phaseMap);
   if (phaseKeys.length === 0) {
     tableRowsHtml = `
-      <tr class="phase-header-row"><td colspan="3">Phase A</td></tr>
-      <tr class="ingredient-row">
+      <tr class="phase-header-row" ${getRowHeightStyle('phase-0')}><td colspan="3">Phase A</td></tr>
+      <tr class="ingredient-row" ${getRowHeightStyle('item-0')}>
         <td class="qty-col"><span class="checkbox-box">☐</span> ${formattedTargetQty} ${batchUom}</td>
         <td class="mat-col">RAW MATERIAL BASE COMPOSITION</td>
         <td class="lot-col"></td>
@@ -211,19 +230,19 @@ export async function printProductionSheet({ version, formula, materials, catego
       const phaseTitle = formatPhaseTitle(pName, pIdx);
 
       tableRowsHtml += `
-        <tr class="phase-header-row">
+        <tr class="phase-header-row" ${getRowHeightStyle(`phase-${pIdx}`)}>
           <td colspan="3">${phaseTitle}</td>
         </tr>
       `;
 
-      phaseMap[pName].forEach(m => {
+      phaseMap[pName].forEach((m, mIdx) => {
         const pct = parseFloat(m.percentage || 0);
         const calcWeight = (pct / 100) * targetBatchSizeNum;
         const formattedQty = calcWeight.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         const matName = (m.material_name_snapshot || m.material_name || m.material_code || m.code || 'RAW MATERIAL').toUpperCase();
 
         tableRowsHtml += `
-          <tr class="ingredient-row">
+          <tr class="ingredient-row" ${getRowHeightStyle(`phase-${pIdx}-item-${mIdx}`)}>
             <td class="qty-col">
               <span class="checkbox-box">☐</span>
               <span>${formattedQty}</span>
@@ -235,8 +254,8 @@ export async function printProductionSheet({ version, formula, materials, catego
       });
     });
   }
-  const totalItemCount = (materials || []).length;
 
+  const totalItemCount = (materials || []).length;
   let pageMargin = '8mm 12mm';
   let bodyPadding = '16px';
   let headerMarginBottom = '14px';
@@ -249,22 +268,10 @@ export async function printProductionSheet({ version, formula, materials, catego
   let notesMarginBottom = '12px';
   let sigMarginTop = '20px';
 
-  if (totalItemCount > 10 && totalItemCount <= 16) {
-    pageMargin = '5mm 10mm';
-    bodyPadding = '10px';
-    headerMarginBottom = '8px';
-    metaMarginBottom = '8px';
-    tableMarginBottom = '8px';
-    rowPadding = '3.5px 8px';
-    rowFontSize = '11px';
-    phasePadding = '3px 8px';
-    notesMarginTop = '8px';
-    notesMarginBottom = '8px';
-    sigMarginTop = '12px';
-  } else if (totalItemCount > 16) {
-    pageMargin = '4mm 8mm';
-    bodyPadding = '6px';
-    headerMarginBottom = '4px';
+  if (totalItemCount > 25) {
+    pageMargin = '5mm 8mm';
+    bodyPadding = '8px';
+    headerMarginBottom = '6px';
     metaMarginBottom = '6px';
     tableMarginBottom = '6px';
     rowPadding = '2px 6px';
@@ -273,6 +280,18 @@ export async function printProductionSheet({ version, formula, materials, catego
     notesMarginTop = '6px';
     notesMarginBottom = '6px';
     sigMarginTop = '8px';
+  } else if (totalItemCount > 15) {
+    pageMargin = '6mm 10mm';
+    bodyPadding = '12px';
+    headerMarginBottom = '8px';
+    metaMarginBottom = '8px';
+    tableMarginBottom = '8px';
+    rowPadding = '3px 8px';
+    rowFontSize = '11px';
+    phasePadding = '3px 8px';
+    notesMarginTop = '8px';
+    notesMarginBottom = '8px';
+    sigMarginTop = '12px';
   }
 
   const selectedFontName = localStorage.getItem('nkb_document_font') || version?.document_font || 'Inter';
@@ -349,16 +368,21 @@ export async function printProductionSheet({ version, formula, materials, catego
 
         <!-- Sheet Table -->
         <table class="sheet-table">
+          <colgroup>
+            <col style="width: ${qWidth}%;" />
+            <col style="width: ${rWidth}%;" />
+            <col style="width: ${lWidth}%;" />
+          </colgroup>
           <thead>
-            <tr>
-              <th class="qty-header" style="width: 22%;">Quantity (${batchUom})</th>
-              <th class="mat-header" style="width: 53%;">Raw Material</th>
-              <th class="lot-header" style="width: 25%; text-align: center;">Lot No.</th>
+            <tr ${getRowHeightStyle('header')}>
+              <th class="qty-header">Quantity (${batchUom})</th>
+              <th class="mat-header">Raw Material</th>
+              <th class="lot-header" style="text-align: center;">Lot No.</th>
             </tr>
           </thead>
           <tbody>
             ${tableRowsHtml}
-            <tr class="total-row">
+            <tr class="total-row" ${getRowHeightStyle('total')}>
               <td class="qty-col">
                 <span class="checkbox-box" style="visibility: hidden;">☐</span>
                 <span>${formattedTargetQty} ${batchUom}</span>
@@ -526,6 +550,7 @@ export async function printProductionSheet({ version, formula, materials, catego
           border-collapse: collapse;
           border: 1px solid #d1d5db;
           margin-bottom: ${tableMarginBottom};
+          table-layout: fixed;
         }
         .sheet-table th {
           background-color: #ffffff;
@@ -537,19 +562,16 @@ export async function printProductionSheet({ version, formula, materials, catego
           text-align: left;
         }
         .sheet-table th.qty-header {
-          width: 125px;
           white-space: nowrap;
         }
         .sheet-table th.mat-header {
           padding-left: 10px;
         }
         .sheet-table th.lot-header {
-          width: 140px;
           text-align: center;
           border-left: 1px solid #d1d5db;
         }
         .lot-col {
-          width: 140px;
           border-left: 1px solid #e5e7eb;
           text-align: center;
         }

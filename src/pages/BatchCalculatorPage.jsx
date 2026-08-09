@@ -3,6 +3,7 @@ import { Calculator, Printer, DollarSign, Search, ChevronDown, Check, X, Play } 
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
 import { printProductionSheet } from '../utils/printProductionSheet';
+import ExcelProductionSheetTable from '../components/ExcelProductionSheetTable';
 
 export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
   const { user } = useAuth();
@@ -136,6 +137,8 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
       });
   };
 
+  const [currentSheetLayout, setCurrentSheetLayout] = useState(null);
+
   const handlePrintPdf = () => {
     if (!batchResult) return;
     printProductionSheet({
@@ -157,6 +160,7 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
       materials: batchResult.items || [],
       categoryDetails: batchResult.categoryDetails,
       user,
+      layoutConfig: currentSheetLayout
     });
   };
 
@@ -493,71 +497,14 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
               </div>
             </div>
 
-            {/* Production Sheet Table */}
-            <div className="overflow-x-auto border border-slate-300 rounded">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300">
-                  <tr>
-                    <th className="p-2.5 w-1/4">Quantity ({batchResult.target_uom?.toLowerCase() || 'g'})</th>
-                    <th className="p-2.5">Raw Material</th>
-                    <th className="p-2.5 text-center w-1/4 border-l border-slate-300">Lot No.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {phaseKeys.length === 0 ? (
-                    batchResult.items.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-2.5 font-mono">
-                          <span className="inline-block text-slate-400 mr-2">☐</span>
-                          <span className="font-bold text-slate-900">{Number(item.scaled_qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </td>
-                        <td className="p-2.5 font-bold text-slate-900 uppercase">{item.material_name_snapshot}</td>
-                        <td className="p-2.5 text-center border-l border-slate-200"></td>
-                      </tr>
-                    ))
-                  ) : (
-                    phaseKeys.map((pName, pIdx) => (
-                      <React.Fragment key={pIdx}>
-                        <tr className="bg-slate-200 font-extrabold text-slate-900">
-                          <td colSpan="3" className="p-2 px-3">
-                            {(() => {
-                              const match = String(pName).trim().match(/^Phase\s+([A-Za-z0-9]+)/i);
-                              if (match) return `Phase ${match[1].toUpperCase()}`;
-                              const lower = String(pName).toLowerCase();
-                              if (lower.includes('water')) return 'Phase A';
-                              if (lower.includes('surfactant') || lower.includes('oil')) return 'Phase B';
-                              if (lower.includes('active')) return 'Phase C';
-                              if (lower.includes('cooling')) return 'Phase D';
-                              if (lower.includes('post')) return 'Phase E';
-                              return pName.startsWith('Phase') ? pName : `Phase ${String.fromCharCode(65 + pIdx)}`;
-                            })()}
-                          </td>
-                        </tr>
-                        {phaseMap[pName].map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50">
-                            <td className="p-2.5 font-mono">
-                              <span className="inline-block text-slate-400 mr-2">☐</span>
-                              <span className="font-bold text-slate-900">{Number(item.scaled_qty).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
-                            </td>
-                            <td className="p-2.5 font-bold text-slate-900 uppercase">{item.material_name_snapshot}</td>
-                            <td className="p-2.5 text-center border-l border-slate-200"></td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
-                    ))
-                  )}
-
-                  {/* Total Row */}
-                  <tr className="bg-slate-200 font-extrabold text-slate-900 text-xs">
-                    <td className="p-2.5 px-3 font-mono">
-                      <span className="invisible mr-2">☐</span>
-                      <span>{Number(batchResult.target_batch_qty).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} {batchResult.target_uom?.toLowerCase() || 'g'}</span>
-                    </td>
-                    <td colSpan="2" className="p-2.5 uppercase font-extrabold text-slate-900">Total Batch Quantity</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {/* Production Sheet Table (Excel-style Editable with Col/Row Resizing & Auto-Save) */}
+            <ExcelProductionSheetTable
+              compoundingCode={batchResult.compounding_code || (batchResult.formula_code ? `CP-${batchResult.formula_code.replace(/[^0-9]/g, '')}` : 'CP-0001')}
+              batchResult={batchResult}
+              phaseKeys={phaseKeys}
+              phaseMap={phaseMap}
+              onLayoutChange={setCurrentSheetLayout}
+            />
 
             {/* Quality Parameters & Specifications Table */}
             <div className="space-y-1.5 pt-1">
