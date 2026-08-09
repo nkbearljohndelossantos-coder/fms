@@ -242,7 +242,7 @@ export async function printProductionSheet({ version, formula, materials, catego
         const calcWeight = (pct / 100) * targetBatchSizeNum;
         const formattedQty = calcWeight.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         const matName = (m.material_name_snapshot || m.material_name || m.material_code || m.code || 'RAW MATERIAL').toUpperCase();
-        const supName = m.supplier || m.supplier_name || m.vendor_name || m.vendor_code || '';
+        const supName = m.supplier || m.supplier_name || m.vendor_name || m.vendor_code || 'NKB Approved Supplier';
 
         tableRowsHtml += `
           <tr class="ingredient-row" ${getRowHeightStyle(`phase-${pIdx}-item-${mIdx}`)}>

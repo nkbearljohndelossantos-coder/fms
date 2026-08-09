@@ -36,6 +36,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const materials = await db('formula_version_materials')
       .leftJoin('materials', 'formula_version_materials.material_id', 'materials.id')
+      .leftJoin('vendors', 'materials.vendor_id', 'vendors.id')
       .leftJoin('formula_phases', 'formula_version_materials.phase_id', 'formula_phases.id')
       .where('formula_version_materials.version_id', versionId)
       .select(
@@ -49,6 +50,8 @@ router.post('/', authenticateToken, async (req, res) => {
         'materials.specific_gravity',
         'materials.unit_weight',
         'materials.unit_weight_uom',
+        'vendors.name as vendor_name',
+        'vendors.code as vendor_code',
         'formula_phases.phase_name',
         'formula_phases.phase_order'
       )
@@ -97,6 +100,7 @@ router.post('/', authenticateToken, async (req, res) => {
         cost_per_uom: rawCost.toFixed(4),
         line_cost: lineCostDec.toFixed(2),
         currency_code: m.currency_code || 'PHP',
+        supplier: m.vendor_name || m.vendor_code || 'NKB Approved Supplier',
       });
     }
 

@@ -401,7 +401,7 @@ export default function ExcelProductionSheetTable({
                       {item.material_name_snapshot}
                     </td>
                     <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
-                      {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || ''}
+                      {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || 'NKB Approved Supplier'}
                     </td>
                     <td className="p-2.5 text-center align-middle relative">
                       {/* Row Resizer Handle (Bottom Edge) */}
@@ -472,7 +472,7 @@ export default function ExcelProductionSheetTable({
                             {item.material_name_snapshot}
                           </td>
                           <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
-                            {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || ''}
+                            {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || 'NKB Approved Supplier'}
                           </td>
                           <td className="p-2.5 text-center align-middle relative">
                             {/* Row Resizer Handle */}
