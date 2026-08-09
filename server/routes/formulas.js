@@ -739,7 +739,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// DELETE /api/v1/formulas/:id (Delete master formula and all its versions)
+// DELETE /api/v1/formulas/:id (Delete master formula and all its versions & linked records)
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const formulaId = req.params.id;
@@ -752,22 +752,53 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       const versions = await trx('formula_versions').where({ formula_id: formulaId });
       const versionIds = versions.map(v => v.id);
 
+      // Clean up linked production batches and child records first to satisfy Foreign Key constraints
+      const pBatches = await trx('production_batches')
+        .where({ formula_id: formulaId })
+        .orWhere(builder => {
+          if (versionIds.length > 0) {
+            builder.whereIn('formula_version_id', versionIds);
+          }
+        });
+      const batchIds = pBatches.map(b => b.id);
+
+      if (batchIds.length > 0) {
+        await trx('batch_material_entries').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_material_requirements').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_steps').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_phases').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_execution_locks').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_deviations').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('qr_tokens').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('production_batches').whereIn('id', batchIds).del().catch(() => {});
+      }
+
       if (versionIds.length > 0) {
-        await trx('formula_version_materials').whereIn('version_id', versionIds).del();
-        await trx('formula_phases').whereIn('version_id', versionIds).del();
-        await trx('formula_instructions').whereIn('version_id', versionIds).del();
-        await trx('cosmetic_formula_details').whereIn('version_id', versionIds).del();
-        await trx('perfume_formula_details').whereIn('version_id', versionIds).del();
-        await trx('supplement_formula_details').whereIn('version_id', versionIds).del();
-        await trx('formula_versions').whereIn('id', versionIds).del();
+        await trx('batch_calculations').whereIn('formula_version_id', versionIds).del().catch(() => {});
+        await trx('compounding_code_logs').where({ formula_id: formulaId }).del().catch(() => {});
+        await trx('compounding_codes').where({ formula_code: formula.code }).del().catch(() => {});
+        await trx('quality_parameters').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('microbiology_tests').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('packaging_specs').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('stability_testing').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('perfume_conversions').whereIn('version_id', versionIds).del().catch(() => {});
+
+        await trx('formula_version_materials').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('formula_phases').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('formula_instructions').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('cosmetic_formula_details').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('perfume_formula_details').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('supplement_formula_details').whereIn('version_id', versionIds).del().catch(() => {});
+        await trx('formula_versions').whereIn('id', versionIds).del().catch(() => {});
       }
 
       await trx('formulas').where({ id: formulaId }).del();
 
+      const userRole = (req.user?.roles && req.user.roles[0]) || req.user?.role || 'User';
       await AuditService.logEvent({
         trx,
-        userId: req.user.id,
-        userRole: req.user.roles[0] || 'User',
+        userId: req.user?.id || 1,
+        userRole,
         action: 'DELETE_FORMULA',
         entityType: 'Formula',
         entityId: formulaId,
@@ -777,6 +808,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     return res.json({ success: true, message: `Formula ${formula.code} deleted successfully.` });
   } catch (err) {
+    console.error('Error deleting formula:', err);
     return res.status(500).json({ success: false, message: 'Failed to delete formula', error: err.message });
   }
 });
@@ -791,17 +823,49 @@ router.delete('/versions/:versionId', authenticateToken, async (req, res) => {
     }
 
     await db.transaction(async (trx) => {
-      await trx('formula_version_materials').where({ version_id: versionId }).del();
-      await trx('formula_phases').where({ version_id: versionId }).del();
-      await trx('formula_instructions').where({ version_id: versionId }).del();
-      await trx('cosmetic_formula_details').where({ version_id: versionId }).del();
-      await trx('perfume_formula_details').where({ version_id: versionId }).del();
-      await trx('supplement_formula_details').where({ version_id: versionId }).del();
+      const pBatches = await trx('production_batches').where({ formula_version_id: versionId });
+      const batchIds = pBatches.map(b => b.id);
+      if (batchIds.length > 0) {
+        await trx('batch_material_entries').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_material_requirements').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_steps').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_phases').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_execution_locks').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('batch_deviations').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('qr_tokens').whereIn('batch_id', batchIds).del().catch(() => {});
+        await trx('production_batches').whereIn('id', batchIds).del().catch(() => {});
+      }
+
+      await trx('batch_calculations').where({ formula_version_id: versionId }).del().catch(() => {});
+      await trx('quality_parameters').where({ version_id: versionId }).del().catch(() => {});
+      await trx('microbiology_tests').where({ version_id: versionId }).del().catch(() => {});
+      await trx('packaging_specs').where({ version_id: versionId }).del().catch(() => {});
+      await trx('stability_testing').where({ version_id: versionId }).del().catch(() => {});
+      await trx('perfume_conversions').where({ version_id: versionId }).del().catch(() => {});
+
+      await trx('formula_version_materials').where({ version_id: versionId }).del().catch(() => {});
+      await trx('formula_phases').where({ version_id: versionId }).del().catch(() => {});
+      await trx('formula_instructions').where({ version_id: versionId }).del().catch(() => {});
+      await trx('cosmetic_formula_details').where({ version_id: versionId }).del().catch(() => {});
+      await trx('perfume_formula_details').where({ version_id: versionId }).del().catch(() => {});
+      await trx('supplement_formula_details').where({ version_id: versionId }).del().catch(() => {});
       await trx('formula_versions').where({ id: versionId }).del();
+
+      const userRole = (req.user?.roles && req.user.roles[0]) || req.user?.role || 'User';
+      await AuditService.logEvent({
+        trx,
+        userId: req.user?.id || 1,
+        userRole,
+        action: 'DELETE_FORMULA_VERSION',
+        entityType: 'FormulaVersion',
+        entityId: versionId,
+        newValues: { major_version: version.major_version, minor_version: version.minor_version },
+      });
     });
 
     return res.json({ success: true, message: `Formula version V${version.major_version}.${version.minor_version} deleted successfully.` });
   } catch (err) {
+    console.error('Error deleting formula version:', err);
     return res.status(500).json({ success: false, message: 'Failed to delete formula version', error: err.message });
   }
 });
@@ -1312,46 +1376,6 @@ router.post('/versions/:versionId/create-batch', authenticateToken, async (req, 
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Batch creation failed', error: err.message });
-  }
-});
-
-// DELETE /api/v1/formulas/:id - Delete formula and its associated versions & materials
-router.delete('/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const formula = await db('formulas').where({ id }).first();
-    if (!formula) {
-      return res.status(404).json({ success: false, message: 'Formula not found.' });
-    }
-
-    await db.transaction(async (trx) => {
-      const versions = await trx('formula_versions').where({ formula_id: id }).select('id');
-      const versionIds = versions.map(v => v.id);
-
-      if (versionIds.length > 0) {
-        await trx('formula_version_materials').whereIn('version_id', versionIds).del();
-        await trx('formula_phases').whereIn('version_id', versionIds).del();
-        await trx('cosmetic_formula_details').whereIn('version_id', versionIds).del();
-        await trx('formula_versions').whereIn('id', versionIds).del();
-      }
-
-      await trx('formulas').where({ id }).del();
-
-      await AuditService.logEvent({
-        trx,
-        userId: req.user.id,
-        userRole: req.user.roles?.[0] || 'User',
-        action: 'DELETE_FORMULA',
-        entityType: 'Formula',
-        entityId: id,
-        newValues: { code: formula.code, name: formula.name },
-      });
-    });
-
-    return res.json({ success: true, message: `Formula '${formula.name}' deleted successfully.` });
-  } catch (err) {
-    console.error('Error deleting formula:', err);
-    return res.status(500).json({ success: false, message: 'Failed to delete formula.', error: err.message });
   }
 });
 
