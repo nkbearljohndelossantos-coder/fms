@@ -381,7 +381,7 @@ export async function printProductionSheet({ version, formula, materials, catego
             <tr ${getRowHeightStyle('header')}>
               <th class="qty-header">Quantity (${batchUom})</th>
               <th class="mat-header">Raw Material</th>
-              <th class="sup-header">Supplier</th>
+              <th class="sup-header">Supplier / Vendor</th>
               <th class="lot-header" style="text-align: center;">Lot No.</th>
             </tr>
           </thead>

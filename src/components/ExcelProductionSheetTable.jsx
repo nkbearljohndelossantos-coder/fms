@@ -360,13 +360,13 @@ export default function ExcelProductionSheetTable({
               </th>
 
               <th className="p-2.5 font-bold text-slate-900 border-r border-slate-300 relative">
-                Supplier
+                Supplier / Vendor
                 {/* Column 2 Resizer Handle */}
                 {!isLocked && (
                   <div
                     onMouseDown={(e) => handleColMouseDown(2, e)}
                     onDoubleClick={() => handleColDoubleClick(2)}
-                    title="Drag to resize Supplier column width. Double click to AutoFit."
+                    title="Drag to resize Supplier / Vendor column width. Double click to AutoFit."
                     className="absolute top-0 right-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/50 active:bg-emerald-600 z-20 flex items-center justify-center print:hidden group-hover:bg-slate-300"
                   >
                     <div className="w-0.5 h-4 bg-slate-400 group-hover:bg-emerald-700" />
