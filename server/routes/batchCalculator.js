@@ -91,7 +91,7 @@ router.post('/', authenticateToken, async (req, res) => {
       items.push({
         material_id: m.material_id,
         material_code_snapshot: m.material_code_snapshot || m.mat_code,
-        material_name_snapshot: m.material_name_snapshot || m.mat_name,
+        material_name_snapshot: m.mat_name || m.material_name || m.name || m.material_name_snapshot,
         phase_name: m.phase_name || 'Phase A - Water Phase',
         percentage: pctDec.toFixed(4),
         scaled_qty: scaledQtyDec.toFixed(2),

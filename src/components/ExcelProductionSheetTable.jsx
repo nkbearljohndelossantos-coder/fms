@@ -398,10 +398,10 @@ export default function ExcelProductionSheetTable({
                       </span>
                     </td>
                     <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
-                      {((item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
+                      {((item.mat_name && String(item.mat_name).trim()) ||
                         (item.material_name && String(item.material_name).trim()) ||
-                        (item.mat_name && String(item.mat_name).trim()) ||
                         (item.name && String(item.name).trim()) ||
+                        (item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
                         (item.material_code_snapshot && String(item.material_code_snapshot).trim()) ||
                         (item.material_code && String(item.material_code).trim()) ||
                         (item.mat_code && String(item.mat_code).trim()) ||
@@ -477,10 +477,10 @@ export default function ExcelProductionSheetTable({
                             </span>
                           </td>
                           <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
-                            {((item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
+                            {((item.mat_name && String(item.mat_name).trim()) ||
                               (item.material_name && String(item.material_name).trim()) ||
-                              (item.mat_name && String(item.mat_name).trim()) ||
                               (item.name && String(item.name).trim()) ||
+                              (item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
                               (item.material_code_snapshot && String(item.material_code_snapshot).trim()) ||
                               (item.material_code && String(item.material_code).trim()) ||
                               (item.mat_code && String(item.mat_code).trim()) ||

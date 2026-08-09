@@ -242,10 +242,10 @@ export async function printProductionSheet({ version, formula, materials, catego
         const calcWeight = (pct / 100) * targetBatchSizeNum;
         const formattedQty = calcWeight.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         const matName = (
-          (m.material_name_snapshot && String(m.material_name_snapshot).trim()) ||
-          (m.material_name && String(m.material_name).trim()) ||
           (m.mat_name && String(m.mat_name).trim()) ||
+          (m.material_name && String(m.material_name).trim()) ||
           (m.name && String(m.name).trim()) ||
+          (m.material_name_snapshot && String(m.material_name_snapshot).trim()) ||
           (m.material_code_snapshot && String(m.material_code_snapshot).trim()) ||
           (m.material_code && String(m.material_code).trim()) ||
           (m.mat_code && String(m.mat_code).trim()) ||
