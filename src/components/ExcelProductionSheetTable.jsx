@@ -4,9 +4,10 @@ import { apiFetch } from '../services/api';
 
 const DEFAULT_LAYOUT = {
   columnWidths: {
-    quantity: 20,
-    rawMaterial: 50,
-    lotNo: 30
+    quantity: 15,
+    rawMaterial: 40,
+    supplier: 25,
+    lotNo: 20
   },
   rowHeights: {
     default: 36,
@@ -68,7 +69,6 @@ export default function ExcelProductionSheetTable({
 
   // Debounced auto-save function (1-second debounce, last adjustment wins)
   const triggerDebouncedSave = useCallback((newLayout) => {
-    // Save to local storage instantly
     try {
       localStorage.setItem(`nkb_sheet_layout_${compoundingCode}`, JSON.stringify(newLayout));
     } catch (_) {}
@@ -94,7 +94,7 @@ export default function ExcelProductionSheetTable({
         }
       } catch (_) {
         if (currentRequestId === lastRequestIdRef.current) {
-          setSaveStatus('saved'); // Fallback saved in localStorage
+          setSaveStatus('saved');
         }
       }
     }, 1000);
@@ -121,32 +121,43 @@ export default function ExcelProductionSheetTable({
     const tableWidth = tableEl.getBoundingClientRect().width;
     const startX = e.clientX;
 
-    const startWidths = { ...layout.columnWidths };
+    const startWidths = {
+      quantity: layout.columnWidths.quantity || 15,
+      rawMaterial: layout.columnWidths.rawMaterial || 40,
+      supplier: layout.columnWidths.supplier || 25,
+      lotNo: layout.columnWidths.lotNo || 20
+    };
 
     const onMouseMove = (moveEvt) => {
       const deltaPx = moveEvt.clientX - startX;
       const deltaPct = (deltaPx / tableWidth) * 100;
 
       updateLayout((prev) => {
-        let q = prev.columnWidths.quantity;
-        let r = prev.columnWidths.rawMaterial;
-        let l = prev.columnWidths.lotNo;
+        let q = prev.columnWidths.quantity || 15;
+        let r = prev.columnWidths.rawMaterial || 40;
+        let s = prev.columnWidths.supplier || 25;
+        let l = prev.columnWidths.lotNo || 20;
 
         if (colIdx === 0) {
           // Boundary between Quantity (0) and Raw Material (1)
-          const newQ = Math.min(Math.max(10, startWidths.quantity + deltaPct), 60);
+          const newQ = Math.min(Math.max(10, startWidths.quantity + deltaPct), 40);
           q = Math.round(newQ * 10) / 10;
-          r = Math.round((100 - q - l) * 10) / 10;
+          r = Math.round((100 - q - s - l) * 10) / 10;
         } else if (colIdx === 1) {
-          // Boundary between Raw Material (1) and Lot No (2)
-          const newR = Math.min(Math.max(20, startWidths.rawMaterial + deltaPct), 75);
+          // Boundary between Raw Material (1) and Supplier (2)
+          const newR = Math.min(Math.max(20, startWidths.rawMaterial + deltaPct), 65);
           r = Math.round(newR * 10) / 10;
-          l = Math.round((100 - q - r) * 10) / 10;
+          s = Math.round((100 - q - r - l) * 10) / 10;
+        } else if (colIdx === 2) {
+          // Boundary between Supplier (2) and Lot No (3)
+          const newS = Math.min(Math.max(10, startWidths.supplier + deltaPct), 50);
+          s = Math.round(newS * 10) / 10;
+          l = Math.round((100 - q - r - s) * 10) / 10;
         }
 
         return {
           ...prev,
-          columnWidths: { quantity: q, rawMaterial: r, lotNo: l }
+          columnWidths: { quantity: q, rawMaterial: r, supplier: s, lotNo: l }
         };
       });
     };
@@ -164,25 +175,22 @@ export default function ExcelProductionSheetTable({
   const handleColDoubleClick = (colIdx) => {
     if (isLocked) return;
     updateLayout((prev) => {
-      let q = prev.columnWidths.quantity;
-      let r = prev.columnWidths.rawMaterial;
-      let l = prev.columnWidths.lotNo;
+      let q = prev.columnWidths.quantity || 15;
+      let r = prev.columnWidths.rawMaterial || 40;
+      let s = prev.columnWidths.supplier || 25;
+      let l = prev.columnWidths.lotNo || 20;
 
       if (colIdx === 0) {
-        // AutoFit Quantity column to 20%
-        q = 20;
-        r = 50;
-        l = 30;
+        q = 15; r = 40; s = 25; l = 20;
       } else if (colIdx === 1) {
-        // AutoFit Raw Material column to 55%
-        r = 55;
-        l = 25;
-        q = 20;
+        r = 45; s = 20; l = 20; q = 15;
+      } else if (colIdx === 2) {
+        s = 25; l = 20; r = 40; q = 15;
       }
 
       return {
         ...prev,
-        columnWidths: { quantity: q, rawMaterial: r, lotNo: l }
+        columnWidths: { quantity: q, rawMaterial: r, supplier: s, lotNo: l }
       };
     });
   };
@@ -280,7 +288,7 @@ export default function ExcelProductionSheetTable({
               type="button"
               onClick={handleResetLayout}
               className="px-2.5 py-1 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-200 border border-slate-300 rounded-md font-semibold flex items-center gap-1 transition"
-              title="Reset column widths (20%/50%/30%) and row heights to default"
+              title="Reset column widths (15%/40%/25%/20%) and row heights to default"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
               Reset Table Layout
@@ -313,9 +321,10 @@ export default function ExcelProductionSheetTable({
         <table ref={tableRef} className="w-full text-left text-xs border-collapse table-fixed">
           {/* Column Group definition for strict percentage layout */}
           <colgroup>
-            <col style={{ width: `${layout.columnWidths.quantity}%` }} />
-            <col style={{ width: `${layout.columnWidths.rawMaterial}%` }} />
-            <col style={{ width: `${layout.columnWidths.lotNo}%` }} />
+            <col style={{ width: `${layout.columnWidths.quantity || 15}%` }} />
+            <col style={{ width: `${layout.columnWidths.rawMaterial || 40}%` }} />
+            <col style={{ width: `${layout.columnWidths.supplier || 25}%` }} />
+            <col style={{ width: `${layout.columnWidths.lotNo || 20}%` }} />
           </colgroup>
 
           <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 select-none">
@@ -350,6 +359,21 @@ export default function ExcelProductionSheetTable({
                 )}
               </th>
 
+              <th className="p-2.5 font-bold text-slate-900 border-r border-slate-300 relative">
+                Supplier
+                {/* Column 2 Resizer Handle */}
+                {!isLocked && (
+                  <div
+                    onMouseDown={(e) => handleColMouseDown(2, e)}
+                    onDoubleClick={() => handleColDoubleClick(2)}
+                    title="Drag to resize Supplier column width. Double click to AutoFit."
+                    className="absolute top-0 right-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/50 active:bg-emerald-600 z-20 flex items-center justify-center print:hidden group-hover:bg-slate-300"
+                  >
+                    <div className="w-0.5 h-4 bg-slate-400 group-hover:bg-emerald-700" />
+                  </div>
+                )}
+              </th>
+
               <th className="p-2.5 text-center font-bold text-slate-900">
                 Lot No.
               </th>
@@ -376,6 +400,9 @@ export default function ExcelProductionSheetTable({
                     <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
                       {item.material_name_snapshot}
                     </td>
+                    <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
+                      {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || ''}
+                    </td>
                     <td className="p-2.5 text-center align-middle relative">
                       {/* Row Resizer Handle (Bottom Edge) */}
                       {!isLocked && (
@@ -401,7 +428,7 @@ export default function ExcelProductionSheetTable({
                       style={{ height: `${phaseRowH}px` }}
                       className="bg-slate-200 font-extrabold text-slate-900 relative group"
                     >
-                      <td colSpan="3" className="p-2 px-3 align-middle relative border-b border-slate-300">
+                      <td colSpan="4" className="p-2 px-3 align-middle relative border-b border-slate-300">
                         {(() => {
                           const match = String(pName).trim().match(/^Phase\s+([A-Za-z0-9]+)/i);
                           if (match) return `Phase ${match[1].toUpperCase()}`;
@@ -444,6 +471,9 @@ export default function ExcelProductionSheetTable({
                           <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
                             {item.material_name_snapshot}
                           </td>
+                          <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
+                            {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || ''}
+                          </td>
                           <td className="p-2.5 text-center align-middle relative">
                             {/* Row Resizer Handle */}
                             {!isLocked && (
@@ -475,7 +505,7 @@ export default function ExcelProductionSheetTable({
                   {batchResult.target_uom?.toLowerCase() || 'g'}
                 </span>
               </td>
-              <td colSpan="2" className="p-2.5 uppercase font-extrabold text-slate-900 align-middle relative">
+              <td colSpan="3" className="p-2.5 uppercase font-extrabold text-slate-900 align-middle relative">
                 Total Batch Quantity
                 {!isLocked && (
                   <div

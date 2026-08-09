@@ -203,9 +203,10 @@ export async function printProductionSheet({ version, formula, materials, catego
     } catch (_) {}
   }
 
-  const qWidth = activeLayout?.columnWidths?.quantity || 20;
-  const rWidth = activeLayout?.columnWidths?.rawMaterial || 50;
-  const lWidth = activeLayout?.columnWidths?.lotNo || 30;
+  const qWidth = activeLayout?.columnWidths?.quantity || 15;
+  const rWidth = activeLayout?.columnWidths?.rawMaterial || 40;
+  const sWidth = activeLayout?.columnWidths?.supplier || 25;
+  const lWidth = activeLayout?.columnWidths?.lotNo || 20;
   const customRowHeights = activeLayout?.rowHeights?.rows || {};
 
   const getRowHeightStyle = (rowId) => {
@@ -218,10 +219,11 @@ export async function printProductionSheet({ version, formula, materials, catego
   const phaseKeys = Object.keys(phaseMap);
   if (phaseKeys.length === 0) {
     tableRowsHtml = `
-      <tr class="phase-header-row" ${getRowHeightStyle('phase-0')}><td colspan="3">Phase A</td></tr>
+      <tr class="phase-header-row" ${getRowHeightStyle('phase-0')}><td colspan="4">Phase A</td></tr>
       <tr class="ingredient-row" ${getRowHeightStyle('item-0')}>
         <td class="qty-col"><span class="checkbox-box">☐</span> ${formattedTargetQty} ${batchUom}</td>
         <td class="mat-col">RAW MATERIAL BASE COMPOSITION</td>
+        <td class="sup-col"></td>
         <td class="lot-col"></td>
       </tr>
     `;
@@ -231,7 +233,7 @@ export async function printProductionSheet({ version, formula, materials, catego
 
       tableRowsHtml += `
         <tr class="phase-header-row" ${getRowHeightStyle(`phase-${pIdx}`)}>
-          <td colspan="3">${phaseTitle}</td>
+          <td colspan="4">${phaseTitle}</td>
         </tr>
       `;
 
@@ -240,6 +242,7 @@ export async function printProductionSheet({ version, formula, materials, catego
         const calcWeight = (pct / 100) * targetBatchSizeNum;
         const formattedQty = calcWeight.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         const matName = (m.material_name_snapshot || m.material_name || m.material_code || m.code || 'RAW MATERIAL').toUpperCase();
+        const supName = m.supplier || m.supplier_name || m.vendor_name || m.vendor_code || '';
 
         tableRowsHtml += `
           <tr class="ingredient-row" ${getRowHeightStyle(`phase-${pIdx}-item-${mIdx}`)}>
@@ -248,13 +251,13 @@ export async function printProductionSheet({ version, formula, materials, catego
               <span>${formattedQty}</span>
             </td>
             <td class="mat-col">${matName}</td>
+            <td class="sup-col">${supName}</td>
             <td class="lot-col"></td>
           </tr>
         `;
       });
     });
   }
-
   const totalItemCount = (materials || []).length;
   let pageMargin = '8mm 12mm';
   let bodyPadding = '16px';
@@ -371,12 +374,14 @@ export async function printProductionSheet({ version, formula, materials, catego
           <colgroup>
             <col style="width: ${qWidth}%;" />
             <col style="width: ${rWidth}%;" />
+            <col style="width: ${sWidth}%;" />
             <col style="width: ${lWidth}%;" />
           </colgroup>
           <thead>
             <tr ${getRowHeightStyle('header')}>
               <th class="qty-header">Quantity (${batchUom})</th>
               <th class="mat-header">Raw Material</th>
+              <th class="sup-header">Supplier</th>
               <th class="lot-header" style="text-align: center;">Lot No.</th>
             </tr>
           </thead>
@@ -387,7 +392,7 @@ export async function printProductionSheet({ version, formula, materials, catego
                 <span class="checkbox-box" style="visibility: hidden;">☐</span>
                 <span>${formattedTargetQty} ${batchUom}</span>
               </td>
-              <td colspan="2"><strong>TOTAL BATCH QUANTITY</strong></td>
+              <td colspan="3"><strong>TOTAL BATCH QUANTITY</strong></td>
             </tr>
           </tbody>
         </table>
