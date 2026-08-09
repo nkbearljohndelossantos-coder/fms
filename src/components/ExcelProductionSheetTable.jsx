@@ -398,7 +398,15 @@ export default function ExcelProductionSheetTable({
                       </span>
                     </td>
                     <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
-                      {item.material_name_snapshot}
+                      {((item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
+                        (item.material_name && String(item.material_name).trim()) ||
+                        (item.mat_name && String(item.mat_name).trim()) ||
+                        (item.name && String(item.name).trim()) ||
+                        (item.material_code_snapshot && String(item.material_code_snapshot).trim()) ||
+                        (item.material_code && String(item.material_code).trim()) ||
+                        (item.mat_code && String(item.mat_code).trim()) ||
+                        (item.code && String(item.code).trim()) ||
+                        'RAW MATERIAL').toUpperCase()}
                     </td>
                     <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
                       {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || 'NKB Approved Supplier'}
@@ -469,7 +477,15 @@ export default function ExcelProductionSheetTable({
                             </span>
                           </td>
                           <td className="p-2.5 font-bold text-slate-900 uppercase border-r border-slate-200 align-middle">
-                            {item.material_name_snapshot}
+                            {((item.material_name_snapshot && String(item.material_name_snapshot).trim()) ||
+                              (item.material_name && String(item.material_name).trim()) ||
+                              (item.mat_name && String(item.mat_name).trim()) ||
+                              (item.name && String(item.name).trim()) ||
+                              (item.material_code_snapshot && String(item.material_code_snapshot).trim()) ||
+                              (item.material_code && String(item.material_code).trim()) ||
+                              (item.mat_code && String(item.mat_code).trim()) ||
+                              (item.code && String(item.code).trim()) ||
+                              'RAW MATERIAL').toUpperCase()}
                           </td>
                           <td className="p-2.5 font-semibold text-slate-700 border-r border-slate-200 align-middle truncate">
                             {item.supplier || item.supplier_name || item.vendor_name || item.vendor_code || 'NKB Approved Supplier'}

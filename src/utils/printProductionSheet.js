@@ -241,7 +241,17 @@ export async function printProductionSheet({ version, formula, materials, catego
         const pct = parseFloat(m.percentage || 0);
         const calcWeight = (pct / 100) * targetBatchSizeNum;
         const formattedQty = calcWeight.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        const matName = (m.material_name_snapshot || m.material_name || m.material_code || m.code || 'RAW MATERIAL').toUpperCase();
+        const matName = (
+          (m.material_name_snapshot && String(m.material_name_snapshot).trim()) ||
+          (m.material_name && String(m.material_name).trim()) ||
+          (m.mat_name && String(m.mat_name).trim()) ||
+          (m.name && String(m.name).trim()) ||
+          (m.material_code_snapshot && String(m.material_code_snapshot).trim()) ||
+          (m.material_code && String(m.material_code).trim()) ||
+          (m.mat_code && String(m.mat_code).trim()) ||
+          (m.code && String(m.code).trim()) ||
+          'RAW MATERIAL'
+        ).toUpperCase();
         const supName = m.supplier || m.supplier_name || m.vendor_name || m.vendor_code || 'NKB Approved Supplier';
 
         tableRowsHtml += `
