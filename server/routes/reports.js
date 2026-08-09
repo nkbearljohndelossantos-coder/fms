@@ -83,6 +83,7 @@ router.get('/formulas/:versionId/pdf', authenticateToken, async (req, res) => {
               <th>Percentage (%)</th>
               <th>Quantity</th>
               <th>UOM</th>
+              <th style="text-align: center; width: 100px;">Lot No.</th>
               <th>Function</th>
             </tr>
           </thead>
@@ -95,6 +96,7 @@ router.get('/formulas/:versionId/pdf', authenticateToken, async (req, res) => {
                 <td>${Number(m.percentage).toFixed(4)}%</td>
                 <td>${Number(m.calculated_quantity).toFixed(4)}</td>
                 <td>${m.uom_snapshot}</td>
+                <td style="text-align: center;"></td>
                 <td>${m.function_name || '-'}</td>
               </tr>
             `).join('')}

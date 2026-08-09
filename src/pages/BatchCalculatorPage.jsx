@@ -498,10 +498,9 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300">
                   <tr>
-                    <th className="p-2.5 w-1/5">Quantity (g)</th>
+                    <th className="p-2.5 w-1/4">Quantity ({batchResult.target_uom?.toLowerCase() || 'g'})</th>
                     <th className="p-2.5">Raw Material</th>
-                    <th className="p-2.5 text-right w-1/5">Unit Cost</th>
-                    <th className="p-2.5 text-right w-1/5">Line Cost (PHP)</th>
+                    <th className="p-2.5 text-center w-1/4 border-l border-slate-300">Lot No.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -513,15 +512,14 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
                           <span className="font-bold text-slate-900">{Number(item.scaled_qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </td>
                         <td className="p-2.5 font-bold text-slate-900 uppercase">{item.material_name_snapshot}</td>
-                        <td className="p-2.5 text-right font-mono text-slate-600">PHP {Number(item.unit_cost_g || 0).toFixed(2)} / g</td>
-                        <td className="p-2.5 text-right font-mono font-bold text-blue-800">PHP {Number(item.line_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-center border-l border-slate-200"></td>
                       </tr>
                     ))
                   ) : (
                     phaseKeys.map((pName, pIdx) => (
                       <React.Fragment key={pIdx}>
                         <tr className="bg-slate-200 font-extrabold text-slate-900">
-                          <td colSpan="4" className="p-2 px-3">
+                          <td colSpan="3" className="p-2 px-3">
                             {(() => {
                               const match = String(pName).trim().match(/^Phase\s+([A-Za-z0-9]+)/i);
                               if (match) return `Phase ${match[1].toUpperCase()}`;
@@ -542,8 +540,7 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
                               <span className="font-bold text-slate-900">{Number(item.scaled_qty).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
                             </td>
                             <td className="p-2.5 font-bold text-slate-900 uppercase">{item.material_name_snapshot}</td>
-                            <td className="p-2.5 text-right font-mono text-slate-600">PHP {Number(item.unit_cost_g || 0).toFixed(2)} / g</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-blue-800">PHP {Number(item.line_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="p-2.5 text-center border-l border-slate-200"></td>
                           </tr>
                         ))}
                       </React.Fragment>
@@ -554,13 +551,9 @@ export function BatchCalculatorPage({ setCurrentPage, setSelectedBatchId }) {
                   <tr className="bg-slate-200 font-extrabold text-slate-900 text-xs">
                     <td className="p-2.5 px-3 font-mono">
                       <span className="invisible mr-2">☐</span>
-                      <span>{Number(batchResult.target_batch_qty).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} g</span>
+                      <span>{Number(batchResult.target_batch_qty).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} {batchResult.target_uom?.toLowerCase() || 'g'}</span>
                     </td>
-                    <td className="p-2.5 uppercase font-extrabold text-slate-900">Total Scaled Batch Cost</td>
-                    <td className="p-2.5 text-right font-mono text-blue-800">PHP {(Number(batchResult.total_batch_cost || 0) / (Number(batchResult.target_batch_qty) || 1)).toFixed(4)} / g</td>
-                    <td className="p-2.5 text-right font-mono text-emerald-900 text-sm font-extrabold">
-                      PHP {Number(batchResult.total_batch_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
+                    <td colSpan="2" className="p-2.5 uppercase font-extrabold text-slate-900">Total Batch Quantity</td>
                   </tr>
                 </tbody>
               </table>

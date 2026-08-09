@@ -292,10 +292,37 @@ export function OperatorFormulaViewPage({ setCurrentPage, batchId, setSelectedBa
         {/* Section divider */}
         <div className="border-t border-black my-5"></div>
 
+        {/* Materials Table for Traveler Printout */}
+        <div className="my-5">
+          <h3 className="text-[11px] font-black uppercase tracking-wider mb-2">Raw Material Batch Composition & Lot Record</h3>
+          <table className="w-full text-left text-xs border border-black border-collapse">
+            <thead>
+              <tr className="bg-slate-200 text-black border-b border-black font-bold uppercase text-[10px]">
+                <th className="p-2 border-r border-black w-12 text-center">Step</th>
+                <th className="p-2 border-r border-black">Material Name</th>
+                <th className="p-2 border-r border-black text-right w-28">Target Qty (kg)</th>
+                <th className="p-2 border-r border-black text-center w-36">Lot No.</th>
+                <th className="p-2 text-center w-24">Sign-off</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black">
+              {requirements.map((req, idx) => (
+                <tr key={req.id} className="text-[11px]">
+                  <td className="p-2 border-r border-black text-center font-bold">{idx + 1}</td>
+                  <td className="p-2 border-r border-black font-bold">{req.material_name} ({req.material_code})</td>
+                  <td className="p-2 border-r border-black text-right font-mono font-bold">{Number(req.target_weight).toFixed(4)} kg</td>
+                  <td className="p-2 border-r border-black text-center font-mono"></td>
+                  <td className="p-2 text-center">☐</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {/* Batching Requirement Section */}
         <div className="text-xs">
           <h3 className="text-[11px] font-black uppercase tracking-wider mb-4">
-            Batching Requirement
+            Batching Requirement & Verification
           </h3>
 
           <div className="grid grid-cols-1 gap-3">
