@@ -269,42 +269,54 @@ export async function printProductionSheet({ version, formula, materials, catego
     });
   }
   const totalItemCount = (materials || []).length;
-  let pageMargin = '8mm 12mm';
-  let bodyPadding = '16px';
-  let headerMarginBottom = '14px';
-  let metaMarginBottom = '12px';
-  let tableMarginBottom = '12px';
-  let rowPadding = '5px 10px';
-  let rowFontSize = '12px';
-  let phasePadding = '4px 10px';
-  let notesMarginTop = '12px';
-  let notesMarginBottom = '12px';
-  let sigMarginTop = '20px';
+  let pageMargin = '6mm 10mm';
+  let bodyPadding = '10px';
+  let headerMarginBottom = '10px';
+  let metaMarginBottom = '10px';
+  let tableMarginBottom = '10px';
+  let rowPadding = '4px 8px';
+  let rowFontSize = '11.5px';
+  let phasePadding = '3px 8px';
+  let notesMarginTop = '10px';
+  let notesMarginBottom = '10px';
+  let sigMarginTop = '12px';
 
-  if (totalItemCount > 25) {
+  if (totalItemCount > 20) {
+    pageMargin = '4mm 6mm';
+    bodyPadding = '4px';
+    headerMarginBottom = '4px';
+    metaMarginBottom = '4px';
+    tableMarginBottom = '4px';
+    rowPadding = '2px 4px';
+    rowFontSize = '9.5px';
+    phasePadding = '2px 4px';
+    notesMarginTop = '4px';
+    notesMarginBottom = '4px';
+    sigMarginTop = '6px';
+  } else if (totalItemCount > 12) {
     pageMargin = '5mm 8mm';
-    bodyPadding = '8px';
+    bodyPadding = '6px';
     headerMarginBottom = '6px';
     metaMarginBottom = '6px';
     tableMarginBottom = '6px';
-    rowPadding = '2px 6px';
-    rowFontSize = '10px';
+    rowPadding = '2.5px 6px';
+    rowFontSize = '10.5px';
     phasePadding = '2px 6px';
     notesMarginTop = '6px';
     notesMarginBottom = '6px';
     sigMarginTop = '8px';
-  } else if (totalItemCount > 15) {
+  } else if (totalItemCount > 8) {
     pageMargin = '6mm 10mm';
-    bodyPadding = '12px';
+    bodyPadding = '8px';
     headerMarginBottom = '8px';
     metaMarginBottom = '8px';
     tableMarginBottom = '8px';
-    rowPadding = '3px 8px';
+    rowPadding = '3.5px 8px';
     rowFontSize = '11px';
     phasePadding = '3px 8px';
     notesMarginTop = '8px';
     notesMarginBottom = '8px';
-    sigMarginTop = '12px';
+    sigMarginTop = '10px';
   }
 
   const selectedFontName = localStorage.getItem('nkb_document_font') || version?.document_font || 'Inter';
@@ -753,6 +765,16 @@ export async function printProductionSheet({ version, formula, materials, catego
             max-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
+          }
+          .sheet-page {
+            padding-bottom: 0 !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .sheet-page:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
         }
       </style>
