@@ -281,17 +281,41 @@ export async function printProductionSheet({ version, formula, materials, catego
   let notesMarginBottom = '10px';
   let sigMarginTop = '12px';
 
-  if (totalItemCount > 20) {
+  if (totalItemCount > 30) {
+    pageMargin = '3mm 5mm';
+    bodyPadding = '2px';
+    headerMarginBottom = '3px';
+    metaMarginBottom = '3px';
+    tableMarginBottom = '3px';
+    rowPadding = '1.5px 3px';
+    rowFontSize = '8px';
+    phasePadding = '1.5px 3px';
+    notesMarginTop = '3px';
+    notesMarginBottom = '3px';
+    sigMarginTop = '4px';
+  } else if (totalItemCount > 22) {
     pageMargin = '4mm 6mm';
     bodyPadding = '4px';
     headerMarginBottom = '4px';
     metaMarginBottom = '4px';
     tableMarginBottom = '4px';
     rowPadding = '2px 4px';
-    rowFontSize = '9.5px';
+    rowFontSize = '9px';
     phasePadding = '2px 4px';
     notesMarginTop = '4px';
     notesMarginBottom = '4px';
+    sigMarginTop = '6px';
+  } else if (totalItemCount > 16) {
+    pageMargin = '4mm 8mm';
+    bodyPadding = '5px';
+    headerMarginBottom = '5px';
+    metaMarginBottom = '5px';
+    tableMarginBottom = '5px';
+    rowPadding = '2px 5px';
+    rowFontSize = '9.5px';
+    phasePadding = '2px 5px';
+    notesMarginTop = '5px';
+    notesMarginBottom = '5px';
     sigMarginTop = '6px';
   } else if (totalItemCount > 12) {
     pageMargin = '5mm 8mm';
@@ -306,12 +330,12 @@ export async function printProductionSheet({ version, formula, materials, catego
     notesMarginBottom = '6px';
     sigMarginTop = '8px';
   } else if (totalItemCount > 8) {
-    pageMargin = '6mm 10mm';
+    pageMargin = '5.5mm 10mm';
     bodyPadding = '8px';
     headerMarginBottom = '8px';
     metaMarginBottom = '8px';
     tableMarginBottom = '8px';
-    rowPadding = '3.5px 8px';
+    rowPadding = '3px 8px';
     rowFontSize = '11px';
     phasePadding = '3px 8px';
     notesMarginTop = '8px';
