@@ -1,7 +1,7 @@
 export function printSampleRequestForm(data = {}) {
   const {
     request_code = 'SRF-2026-0001',
-    revision_no = 'REV-001',
+    revision_no = '',
     request_date = 'Aug 10, 2026',
     company_name = '',
     address = '',

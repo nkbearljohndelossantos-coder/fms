@@ -63,7 +63,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
   const [fieldStyles, setFieldStyles] = useState({});
 
   const [formData, setFormData] = useState({
-    revisionNo: 'REV-001',
+    revisionNo: '',
     requestDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     companyName: '',
     address: '',
@@ -287,6 +287,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 <span className="text-slate-500 uppercase shrink-0">REVISION NO:</span>
                 <input
                   type="text"
+                  placeholder="Optional"
                   value={formData.revisionNo}
                   onFocus={() => setActiveField('revisionNo')}
                   onChange={(e) => handleChange('revisionNo', e.target.value)}

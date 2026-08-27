@@ -149,7 +149,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const payload = {
       request_code: requestCode,
-      revision_no: revisionNo || 'REV-001',
+      revision_no: revisionNo || '',
       request_date: requestDate || new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       company_name: companyName || '',
       address: address || '',
