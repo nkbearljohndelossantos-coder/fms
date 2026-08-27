@@ -27,16 +27,7 @@ export function printSampleRequestForm(data = {}) {
     noted_by_name = '',
     received_by_name = '',
     status = 'PENDING',
-    // Rich Font Styling Properties
-    active_font = 'Aptos, sans-serif',
-    active_font_size = '14',
-    is_bold = false,
-    is_italic = false,
-    is_underline = false,
-    is_strikethrough = false,
-    text_color = '#000000',
-    highlight_color = '#ffffff',
-    text_align = 'left',
+    field_styles = {},
   } = data;
 
   const printWindow = window.open('', '_blank', 'width=950,height=1100');
@@ -45,19 +36,32 @@ export function printSampleRequestForm(data = {}) {
     return;
   }
 
+  const getStyleForField = (fieldName) => {
+    const s = field_styles[fieldName] || {};
+    const fontFamily = s.fontFamily || 'Aptos, sans-serif';
+    const fontSize = s.fontSize || '14';
+    const isBold = s.isBold || false;
+    const isItalic = s.isItalic || false;
+    const isUnderline = s.isUnderline || false;
+    const isStrikethrough = s.isStrikethrough || false;
+    const textColor = s.textColor || '#000000';
+    const highlightColor = s.highlightColor || 'transparent';
+    const textAlign = s.textAlign || 'left';
+
+    return `
+      font-family: ${fontFamily};
+      font-size: ${fontSize}px;
+      font-weight: ${isBold ? 'bold' : 'normal'};
+      font-style: ${isItalic ? 'italic' : 'normal'};
+      text-decoration: ${[isUnderline && 'underline', isStrikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'};
+      color: ${textColor};
+      background-color: ${highlightColor};
+      text-align: ${textAlign};
+    `;
+  };
+
   const statusBadgeBg = status === 'APPROVED' ? '#d1fae5' : status === 'DECLINED' ? '#fee2e2' : '#fef3c7';
   const statusBadgeText = status === 'APPROVED' ? '#065f46' : status === 'DECLINED' ? '#991b1b' : '#92400e';
-
-  const fontStyleCss = `
-    font-family: ${active_font};
-    font-size: ${active_font_size}px;
-    font-weight: ${is_bold ? 'bold' : 'normal'};
-    font-style: ${is_italic ? 'italic' : 'normal'};
-    text-decoration: ${[is_underline && 'underline', is_strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'};
-    color: ${text_color || '#000000'};
-    background-color: ${highlight_color || 'transparent'};
-    text-align: ${text_align || 'left'};
-  `;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -74,12 +78,12 @@ export function printSampleRequestForm(data = {}) {
           box-sizing: border-box;
         }
         body {
-          font-family: ${active_font};
+          font-family: 'Aptos', 'Inter', system-ui, -apple-system, sans-serif;
           color: #000000;
           background: #ffffff;
           margin: 0;
           padding: 10px;
-          font-size: ${active_font_size}px;
+          font-size: 12px;
           line-height: 1.35;
         }
         .form-container {
@@ -130,9 +134,6 @@ export function printSampleRequestForm(data = {}) {
           border: 1px solid #000000;
           padding: 6px 8px;
           vertical-align: top;
-        }
-        .styled-field {
-          ${fontStyleCss}
         }
         .label-col {
           font-weight: 700;
@@ -224,15 +225,15 @@ export function printSampleRequestForm(data = {}) {
         <table class="data-table">
           <tr>
             <td class="label-col" style="width: 25%;">COMPANY NAME:</td>
-            <td style="width: 75%; font-weight: 700;" class="styled-field">${company_name || '—'}</td>
+            <td style="width: 75%; ${getStyleForField('companyName')}">${company_name || '—'}</td>
           </tr>
           <tr>
             <td class="label-col">ADDRESS:</td>
-            <td class="styled-field">${address || '—'}</td>
+            <td style="${getStyleForField('address')}">${address || '—'}</td>
           </tr>
           <tr>
             <td class="label-col">CONTACT PERSON:</td>
-            <td class="styled-field">${contact_person || '—'}</td>
+            <td style="${getStyleForField('contactPerson')}">${contact_person || '—'}</td>
           </tr>
         </table>
 
@@ -241,15 +242,15 @@ export function printSampleRequestForm(data = {}) {
         <table class="data-table">
           <tr>
             <td class="label-col" style="width: 32%;">1. NAME / DESCRIPTION:</td>
-            <td style="font-weight: 700;" class="styled-field">${product_name || '—'}</td>
+            <td style="${getStyleForField('productName')}">${product_name || '—'}</td>
           </tr>
           <tr>
             <td class="label-col">2. CLASSIFICATION OF PRODUCT:</td>
-            <td class="styled-field">${product_classification || 'Cosmetics'}</td>
+            <td style="${getStyleForField('productClassification')}">${product_classification || 'Cosmetics'}</td>
           </tr>
           <tr>
             <td class="label-col">3. BENCHMARK IF ANY:</td>
-            <td class="styled-field">${benchmark || '—'}</td>
+            <td style="${getStyleForField('benchmark')}">${benchmark || '—'}</td>
           </tr>
           <tr>
             <td class="label-col" colspan="2">4. DETAILED DESCRIPTION OF PRODUCT:</td>
@@ -257,18 +258,18 @@ export function printSampleRequestForm(data = {}) {
           <tr>
             <td style="padding-left: 20px;" colspan="2">
               <table style="width: 100%; border-collapse: collapse;">
-                <tr><td class="sub-num">4.1</td><td style="width: 35%; font-weight: 600;">Specific RAW MATERIALS:</td><td class="styled-field">${specific_raw_materials || '—'}</td></tr>
-                <tr><td class="sub-num">4.2</td><td style="font-weight: 600;">Texture:</td><td class="styled-field">${texture || '—'}</td></tr>
-                <tr><td class="sub-num">4.3</td><td style="font-weight: 600;">Form:</td><td class="styled-field">${form || '—'}</td></tr>
-                <tr><td class="sub-num">4.4</td><td style="font-weight: 600;">Scent/Aroma Direction:</td><td class="styled-field">${scent_aroma_direction || '—'}</td></tr>
-                <tr><td class="sub-num">4.5</td><td style="font-weight: 600;">Color Description:</td><td class="styled-field">${color_description || '—'}</td></tr>
-                <tr><td class="sub-num">4.6</td><td style="font-weight: 600;">Flavor:</td><td class="styled-field">${flavor || '—'}</td></tr>
-                <tr><td class="sub-num">4.7</td><td style="font-weight: 600;">Function / Claims of Products:</td><td class="styled-field">${function_claims || '—'}</td></tr>
-                <tr><td class="sub-num">4.8</td><td style="font-weight: 600;">Direction of Products:</td><td class="styled-field">${direction_of_use || '—'}</td></tr>
-                <tr><td class="sub-num">4.9</td><td style="font-weight: 600;">Net Content:</td><td class="styled-field">${net_content || '—'}</td></tr>
-                <tr><td class="sub-num">4.10</td><td style="font-weight: 600;">Target Price:</td><td class="styled-field">${target_price || '—'}</td></tr>
-                <tr><td class="sub-num">4.11</td><td style="font-weight: 600;">Special Instruction / Others Specify:</td><td class="styled-field">${special_instructions || '—'}</td></tr>
-                <tr><td class="sub-num">4.12</td><td style="font-weight: 600;">Quantity:</td><td class="styled-field">${quantity || '—'}</td></tr>
+                <tr><td class="sub-num">4.1</td><td style="width: 35%; font-weight: 600;">Specific RAW MATERIALS:</td><td style="${getStyleForField('specificRawMaterials')}">${specific_raw_materials || '—'}</td></tr>
+                <tr><td class="sub-num">4.2</td><td style="font-weight: 600;">Texture:</td><td style="${getStyleForField('texture')}">${texture || '—'}</td></tr>
+                <tr><td class="sub-num">4.3</td><td style="font-weight: 600;">Form:</td><td style="${getStyleForField('form')}">${form || '—'}</td></tr>
+                <tr><td class="sub-num">4.4</td><td style="font-weight: 600;">Scent/Aroma Direction:</td><td style="${getStyleForField('scentAromaDirection')}">${scent_aroma_direction || '—'}</td></tr>
+                <tr><td class="sub-num">4.5</td><td style="font-weight: 600;">Color Description:</td><td style="${getStyleForField('colorDescription')}">${color_description || '—'}</td></tr>
+                <tr><td class="sub-num">4.6</td><td style="font-weight: 600;">Flavor:</td><td style="${getStyleForField('flavor')}">${flavor || '—'}</td></tr>
+                <tr><td class="sub-num">4.7</td><td style="font-weight: 600;">Function / Claims of Products:</td><td style="${getStyleForField('functionClaims')}">${function_claims || '—'}</td></tr>
+                <tr><td class="sub-num">4.8</td><td style="font-weight: 600;">Direction of Products:</td><td style="${getStyleForField('directionOfUse')}">${direction_of_use || '—'}</td></tr>
+                <tr><td class="sub-num">4.9</td><td style="font-weight: 600;">Net Content:</td><td style="${getStyleForField('netContent')}">${net_content || '—'}</td></tr>
+                <tr><td class="sub-num">4.10</td><td style="font-weight: 600;">Target Price:</td><td style="${getStyleForField('targetPrice')}">${target_price || '—'}</td></tr>
+                <tr><td class="sub-num">4.11</td><td style="font-weight: 600;">Special Instruction / Others Specify:</td><td style="${getStyleForField('specialInstructions')}">${special_instructions || '—'}</td></tr>
+                <tr><td class="sub-num">4.12</td><td style="font-weight: 600;">Quantity:</td><td style="${getStyleForField('quantity')}">${quantity || '—'}</td></tr>
               </table>
             </td>
           </tr>
@@ -278,13 +279,13 @@ export function printSampleRequestForm(data = {}) {
           <tr>
             <td style="padding-left: 20px;" colspan="2">
               <table style="width: 100%; border-collapse: collapse;">
-                <tr><td class="sub-num">5.1</td><td style="width: 35%; font-weight: 600;">Primary Packaging:</td><td class="styled-field">${primary_packaging || '—'}</td></tr>
+                <tr><td class="sub-num">5.1</td><td style="width: 35%; font-weight: 600;">Primary Packaging:</td><td style="${getStyleForField('primaryPackaging')}">${primary_packaging || '—'}</td></tr>
               </table>
             </td>
           </tr>
           <tr>
             <td class="label-col">6. REMARKS:</td>
-            <td class="styled-field">${remarks || '—'}</td>
+            <td style="${getStyleForField('remarks')}">${remarks || '—'}</td>
           </tr>
         </table>
 

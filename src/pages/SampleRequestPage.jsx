@@ -6,24 +6,61 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowLeft,
+  Calendar,
+  Sparkles,
 } from 'lucide-react';
 import RichFontToolbar from '../components/RichFontToolbar';
 import { printSampleRequestForm } from '../utils/printSampleRequestForm';
 import { useAuth } from '../context/AuthContext';
 
+const FIELD_LABELS = {
+  revisionNo: 'Revision No',
+  requestDate: 'Request Date',
+  companyName: 'Company Name',
+  address: 'Address',
+  contactPerson: 'Contact Person',
+  productName: '1. Name / Description',
+  productClassification: '2. Classification of Product',
+  benchmark: '3. Benchmark If Any',
+  specificRawMaterials: '4.1 Specific RAW MATERIALS',
+  texture: '4.2 Texture',
+  form: '4.3 Form',
+  scentAromaDirection: '4.4 Scent/Aroma Direction',
+  colorDescription: '4.5 Color Description',
+  flavor: '4.6 Flavor',
+  functionClaims: '4.7 Function / Claims',
+  directionOfUse: '4.8 Direction of Products',
+  netContent: '4.9 Net Content',
+  targetPrice: '4.10 Target Price',
+  specialInstructions: '4.11 Special Instructions',
+  quantity: '4.12 Quantity',
+  primaryPackaging: '5.1 Primary Packaging',
+  remarks: '6. Remarks',
+  requestedByName: 'Requested By Signature',
+  notedByName: 'Noted By Signature',
+  receivedByName: 'Received By Signature',
+};
+
+const DEFAULT_STYLE = {
+  fontFamily: 'Aptos, sans-serif',
+  fontSize: '14',
+  isBold: false,
+  isItalic: false,
+  isUnderline: false,
+  isStrikethrough: false,
+  textColor: '#000000',
+  highlightColor: '#ffffff',
+  textAlign: 'left',
+};
+
 export default function SampleRequestPage({ setCurrentPage }) {
   const { user } = useAuth();
 
-  // Formatting state for Rich Text Toolbar
-  const [activeFont, setActiveFont] = useState('Aptos, sans-serif');
-  const [activeFontSize, setActiveFontSize] = useState('14');
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [isStrikethrough, setIsStrikethrough] = useState(false);
-  const [textColor, setTextColor] = useState('#000000');
-  const [highlightColor, setHighlightColor] = useState('#ffffff');
-  const [textAlign, setTextAlign] = useState('left');
+  // Active focused field
+  const [activeField, setActiveField] = useState('companyName');
+
+  // Per-field styling map
+  const [fieldStyles, setFieldStyles] = useState({});
 
   const [formData, setFormData] = useState({
     revisionNo: 'REV-001',
@@ -61,16 +98,40 @@ export default function SampleRequestPage({ setCurrentPage }) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Compute inline input style derived from active toolbar settings
-  const inputStyle = {
-    fontFamily: activeFont,
-    fontSize: `${activeFontSize}px`,
-    fontWeight: isBold ? 'bold' : 'normal',
-    fontStyle: isItalic ? 'italic' : 'normal',
-    textDecoration: [isUnderline && 'underline', isStrikethrough && 'line-through'].filter(Boolean).join(' ') || 'none',
-    color: textColor || '#000000',
-    backgroundColor: highlightColor || '#ffffff',
-    textAlign: textAlign || 'left',
+  // Set Request Date to Today
+  const handleSetTodayDate = () => {
+    const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    setFormData((prev) => ({ ...prev, requestDate: todayStr }));
+  };
+
+  // Helper to update specific style property for active focused field
+  const handleStyleChange = (key, value) => {
+    if (!activeField) return;
+    setFieldStyles((prev) => ({
+      ...prev,
+      [activeField]: {
+        ...(prev[activeField] || DEFAULT_STYLE),
+        [key]: value,
+      },
+    }));
+  };
+
+  // Helper to get active style of focused field for toolbar controls
+  const activeStyle = fieldStyles[activeField] || DEFAULT_STYLE;
+
+  // Helper to compute inline HTML input style for a given field
+  const getFieldInputStyle = (fieldName) => {
+    const s = fieldStyles[fieldName] || DEFAULT_STYLE;
+    return {
+      fontFamily: s.fontFamily || DEFAULT_STYLE.fontFamily,
+      fontSize: `${s.fontSize || DEFAULT_STYLE.fontSize}px`,
+      fontWeight: s.isBold ? 'bold' : 'normal',
+      fontStyle: s.isItalic ? 'italic' : 'normal',
+      textDecoration: [s.isUnderline && 'underline', s.isStrikethrough && 'line-through'].filter(Boolean).join(' ') || 'none',
+      color: s.textColor || '#000000',
+      backgroundColor: s.highlightColor || '#ffffff',
+      textAlign: s.textAlign || 'left',
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -81,17 +142,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
 
     const payload = {
       ...formData,
-      formattedContentJson: {
-        activeFont,
-        activeFontSize,
-        isBold,
-        isItalic,
-        isUnderline,
-        isStrikethrough,
-        textColor,
-        highlightColor,
-        textAlign,
-      },
+      formattedContentJson: fieldStyles,
     };
 
     try {
@@ -147,15 +198,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
       noted_by_name: formData.notedByName,
       received_by_name: formData.receivedByName,
       status: 'PENDING',
-      active_font: activeFont,
-      active_font_size: activeFontSize,
-      is_bold: isBold,
-      is_italic: isItalic,
-      is_underline: isUnderline,
-      is_strikethrough: isStrikethrough,
-      text_color: textColor,
-      highlight_color: highlightColor,
-      text_align: textAlign,
+      field_styles: fieldStyles,
     });
   };
 
@@ -197,27 +240,20 @@ export default function SampleRequestPage({ setCurrentPage }) {
         </div>
       </div>
 
-      {/* Floating Word-Style Rich Font Toolbar */}
+      {/* Floating Word-Style Rich Font Toolbar targeting ONLY the focused field */}
       <div className="sticky top-2 z-30 shadow-md">
         <RichFontToolbar
-          activeFont={activeFont}
-          onChangeFont={setActiveFont}
-          activeFontSize={activeFontSize}
-          onChangeFontSize={setActiveFontSize}
-          isBold={isBold}
-          onToggleBold={() => setIsBold(!isBold)}
-          isItalic={isItalic}
-          onToggleItalic={() => setIsItalic(!isItalic)}
-          isUnderline={isUnderline}
-          onToggleUnderline={() => setIsUnderline(!isUnderline)}
-          isStrikethrough={isStrikethrough}
-          onToggleStrikethrough={() => setIsStrikethrough(!isStrikethrough)}
-          textColor={textColor}
-          onChangeTextColor={setTextColor}
-          highlightColor={highlightColor}
-          onChangeHighlightColor={setHighlightColor}
-          textAlign={textAlign}
-          onChangeTextAlign={setTextAlign}
+          activeFieldLabel={FIELD_LABELS[activeField] || activeField}
+          activeFont={activeStyle.fontFamily}
+          activeFontSize={activeStyle.fontSize}
+          isBold={activeStyle.isBold}
+          isItalic={activeStyle.isItalic}
+          isUnderline={activeStyle.isUnderline}
+          isStrikethrough={activeStyle.isStrikethrough}
+          textColor={activeStyle.textColor}
+          highlightColor={activeStyle.highlightColor}
+          textAlign={activeStyle.textAlign}
+          onStyleChange={handleStyleChange}
         />
       </div>
 
@@ -248,24 +284,45 @@ export default function SampleRequestPage({ setCurrentPage }) {
             </div>
             <div className="col-span-3 p-3 bg-slate-50 text-xs font-bold space-y-2 flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-500 uppercase">REVISION NO:</span>
+                <span className="text-slate-500 uppercase shrink-0">REVISION NO:</span>
                 <input
                   type="text"
                   value={formData.revisionNo}
+                  onFocus={() => setActiveField('revisionNo')}
                   onChange={(e) => handleChange('revisionNo', e.target.value)}
                   className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
-                  style={inputStyle}
+                  style={getFieldInputStyle('revisionNo')}
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500 uppercase">DATE:</span>
-                <input
-                  type="text"
-                  value={formData.requestDate}
-                  onChange={(e) => handleChange('requestDate', e.target.value)}
-                  className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
-                  style={inputStyle}
-                />
+
+              {/* DATE PICKER WITH DROPDOWN CALENDAR AND TODAY BUTTON */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 uppercase shrink-0">DATE:</span>
+                  <input
+                    type="date"
+                    value={formData.requestDate?.includes(',') ? new Date(formData.requestDate).toISOString().split('T')[0] : formData.requestDate}
+                    onFocus={() => setActiveField('requestDate')}
+                    onChange={(e) => {
+                      const d = new Date(e.target.value);
+                      const formatted = isNaN(d.getTime()) ? e.target.value : d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                      handleChange('requestDate', formatted);
+                    }}
+                    className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50 cursor-pointer"
+                    style={getFieldInputStyle('requestDate')}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] text-slate-500 font-semibold truncate">{formData.requestDate}</span>
+                  <button
+                    type="button"
+                    onClick={handleSetTodayDate}
+                    className="px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded font-bold text-[10px] flex items-center gap-1 shrink-0 transition"
+                  >
+                    <Calendar className="w-3 h-3 text-blue-600" />
+                    Today
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -283,9 +340,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   required
                   placeholder="Enter client company name"
                   value={formData.companyName}
+                  onFocus={() => setActiveField('companyName')}
                   onChange={(e) => handleChange('companyName', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('companyName')}
                 />
               </div>
             </div>
@@ -296,9 +354,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   type="text"
                   placeholder="Enter client address"
                   value={formData.address}
+                  onFocus={() => setActiveField('address')}
                   onChange={(e) => handleChange('address', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('address')}
                 />
               </div>
             </div>
@@ -309,9 +368,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   type="text"
                   placeholder="Enter contact person name & phone/email"
                   value={formData.contactPerson}
+                  onFocus={() => setActiveField('contactPerson')}
                   onChange={(e) => handleChange('contactPerson', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('contactPerson')}
                 />
               </div>
             </div>
@@ -331,9 +391,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   required
                   placeholder="Target product name or description"
                   value={formData.productName}
+                  onFocus={() => setActiveField('productName')}
                   onChange={(e) => handleChange('productName', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('productName')}
                 />
               </div>
             </div>
@@ -344,9 +405,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
               <div className="col-span-8 sm:col-span-8">
                 <select
                   value={formData.productClassification}
+                  onFocus={() => setActiveField('productClassification')}
                   onChange={(e) => handleChange('productClassification', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  style={inputStyle}
+                  style={getFieldInputStyle('productClassification')}
                 >
                   <option value="Cosmetics">Cosmetics</option>
                   <option value="Personal Care">Personal Care</option>
@@ -366,9 +428,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   type="text"
                   placeholder="Target benchmark brand or sample reference"
                   value={formData.benchmark}
+                  onFocus={() => setActiveField('benchmark')}
                   onChange={(e) => handleChange('benchmark', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('benchmark')}
                 />
               </div>
             </div>
@@ -387,9 +450,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Key actives, oils, or target ingredients"
                     value={formData.specificRawMaterials}
+                    onFocus={() => setActiveField('specificRawMaterials')}
                     onChange={(e) => handleChange('specificRawMaterials', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('specificRawMaterials')}
                   />
                 </div>
               </div>
@@ -400,9 +464,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Creamy, liquid, gel, serum, powder"
                     value={formData.texture}
+                    onFocus={() => setActiveField('texture')}
                     onChange={(e) => handleChange('texture', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('texture')}
                   />
                 </div>
               </div>
@@ -413,9 +478,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Emulsion, solution, lotion, stick"
                     value={formData.form}
+                    onFocus={() => setActiveField('form')}
                     onChange={(e) => handleChange('form', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('form')}
                   />
                 </div>
               </div>
@@ -426,9 +492,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Floral, citrus, woody, unscented, fruity"
                     value={formData.scentAromaDirection}
+                    onFocus={() => setActiveField('scentAromaDirection')}
                     onChange={(e) => handleChange('scentAromaDirection', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('scentAromaDirection')}
                   />
                 </div>
               </div>
@@ -439,9 +506,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="White, translucent, pink, pale yellow"
                     value={formData.colorDescription}
+                    onFocus={() => setActiveField('colorDescription')}
                     onChange={(e) => handleChange('colorDescription', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('colorDescription')}
                   />
                 </div>
               </div>
@@ -452,9 +520,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="N/A or flavor details for lip care/supplements"
                     value={formData.flavor}
+                    onFocus={() => setActiveField('flavor')}
                     onChange={(e) => handleChange('flavor', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('flavor')}
                   />
                 </div>
               </div>
@@ -465,9 +534,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Whitening, moisturizing, anti-aging, SPF"
                     value={formData.functionClaims}
+                    onFocus={() => setActiveField('functionClaims')}
                     onChange={(e) => handleChange('functionClaims', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('functionClaims')}
                   />
                 </div>
               </div>
@@ -478,9 +548,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Apply to clean face twice daily"
                     value={formData.directionOfUse}
+                    onFocus={() => setActiveField('directionOfUse')}
                     onChange={(e) => handleChange('directionOfUse', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('directionOfUse')}
                   />
                 </div>
               </div>
@@ -491,9 +562,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="50 mL, 100 g, 250 mL"
                     value={formData.netContent}
+                    onFocus={() => setActiveField('netContent')}
                     onChange={(e) => handleChange('netContent', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('netContent')}
                   />
                 </div>
               </div>
@@ -504,9 +576,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="PHP 150.00 / unit or USD 3.00"
                     value={formData.targetPrice}
+                    onFocus={() => setActiveField('targetPrice')}
                     onChange={(e) => handleChange('targetPrice', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('targetPrice')}
                   />
                 </div>
               </div>
@@ -517,9 +590,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Paraben-free, sulfate-free, vegan"
                     value={formData.specialInstructions}
+                    onFocus={() => setActiveField('specialInstructions')}
                     onChange={(e) => handleChange('specialInstructions', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('specialInstructions')}
                   />
                 </div>
               </div>
@@ -530,9 +604,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="e.g., 3 sample jars (100g each)"
                     value={formData.quantity}
+                    onFocus={() => setActiveField('quantity')}
                     onChange={(e) => handleChange('quantity', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('quantity')}
                   />
                 </div>
               </div>
@@ -550,9 +625,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     type="text"
                     placeholder="Airless pump bottle, glass jar, tube"
                     value={formData.primaryPackaging}
+                    onFocus={() => setActiveField('primaryPackaging')}
                     onChange={(e) => handleChange('primaryPackaging', e.target.value)}
                     className="w-full px-2.5 py-1 border border-slate-300 rounded"
-                    style={inputStyle}
+                    style={getFieldInputStyle('primaryPackaging')}
                   />
                 </div>
               </div>
@@ -566,9 +642,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   rows={2}
                   placeholder="Additional notes for formulator"
                   value={formData.remarks}
+                  onFocus={() => setActiveField('remarks')}
                   onChange={(e) => handleChange('remarks', e.target.value)}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  style={inputStyle}
+                  style={getFieldInputStyle('remarks')}
                 />
               </div>
             </div>
@@ -581,9 +658,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
               <input
                 type="text"
                 value={formData.requestedByName}
+                onFocus={() => setActiveField('requestedByName')}
                 onChange={(e) => handleChange('requestedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
-                style={inputStyle}
+                style={getFieldInputStyle('requestedByName')}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">Requestor Signature</div>
             </div>
@@ -594,9 +672,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 type="text"
                 placeholder="Supervisor Signature"
                 value={formData.notedByName}
+                onFocus={() => setActiveField('notedByName')}
                 onChange={(e) => handleChange('notedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
-                style={inputStyle}
+                style={getFieldInputStyle('notedByName')}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">R&D / QC Supervisor</div>
             </div>
@@ -607,9 +686,10 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 type="text"
                 placeholder="Formulator Signature"
                 value={formData.receivedByName}
+                onFocus={() => setActiveField('receivedByName')}
                 onChange={(e) => handleChange('receivedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
-                style={inputStyle}
+                style={getFieldInputStyle('receivedByName')}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">Formulator / Receiver</div>
             </div>
