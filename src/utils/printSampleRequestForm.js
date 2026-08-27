@@ -295,17 +295,14 @@ export function printSampleRequestForm(data = {}) {
             <td>
               <div style="font-weight: 700; margin-bottom: 25px;">Requested by:</div>
               <div style="font-weight: 800; border-bottom: 1px solid #000000; padding-bottom: 2px;">${requested_by_name || 'MSM'}</div>
-              <div style="font-size: 10px; color: #475569; text-align: center; margin-top: 2px;">Requestor Signature</div>
             </td>
             <td>
               <div style="font-weight: 700; margin-bottom: 25px;">Noted by:</div>
               <div style="font-weight: 800; border-bottom: 1px solid #000000; padding-bottom: 2px;">${noted_by_name || '&nbsp;'}</div>
-              <div style="font-size: 10px; color: #475569; text-align: center; margin-top: 2px;">Supervisor / Chemist</div>
             </td>
             <td>
               <div style="font-weight: 700; margin-bottom: 25px;">Received by:</div>
               <div style="font-weight: 800; border-bottom: 1px solid #000000; padding-bottom: 2px;">${received_by_name || '&nbsp;'}</div>
-              <div style="font-size: 10px; color: #475569; text-align: center; margin-top: 2px;">Formulator / Receiver</div>
               <div class="status-badge">${status}</div>
             </td>
           </tr>

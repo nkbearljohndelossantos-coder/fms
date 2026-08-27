@@ -287,7 +287,6 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 <span className="text-slate-500 uppercase shrink-0">REVISION NO:</span>
                 <input
                   type="text"
-                  placeholder="Optional"
                   value={formData.revisionNo}
                   onFocus={() => setActiveField('revisionNo')}
                   onChange={(e) => handleChange('revisionNo', e.target.value)}
@@ -296,25 +295,37 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 />
               </div>
 
-              {/* DATE PICKER WITH DROPDOWN CALENDAR AND TODAY BUTTON */}
+              {/* DATE PICKER WITH MMM DD, YYYY FORMAT AND TODAY BUTTON */}
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500 uppercase shrink-0">DATE:</span>
-                  <input
-                    type="date"
-                    value={formData.requestDate?.includes(',') ? new Date(formData.requestDate).toISOString().split('T')[0] : formData.requestDate}
-                    onFocus={() => setActiveField('requestDate')}
-                    onChange={(e) => {
-                      const d = new Date(e.target.value);
-                      const formatted = isNaN(d.getTime()) ? e.target.value : d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-                      handleChange('requestDate', formatted);
-                    }}
-                    className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50 cursor-pointer"
-                    style={getFieldInputStyle('requestDate')}
-                  />
+                  <div className="relative w-full flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={formData.requestDate}
+                      onFocus={() => setActiveField('requestDate')}
+                      onChange={(e) => handleChange('requestDate', e.target.value)}
+                      placeholder="e.g. Aug 28, 2026"
+                      className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
+                      style={getFieldInputStyle('requestDate')}
+                    />
+                    <label className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded cursor-pointer shrink-0 transition" title="Pick Date from Calendar">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                      <input
+                        type="date"
+                        className="sr-only"
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          const d = new Date(e.target.value);
+                          const formatted = isNaN(d.getTime()) ? e.target.value : d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                          handleChange('requestDate', formatted);
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[10px] text-slate-500 font-semibold truncate">{formData.requestDate}</span>
+                  <span className="text-[10px] font-mono text-blue-600 font-bold truncate">Format: (MMM DD, YYYY)</span>
                   <button
                     type="button"
                     onClick={handleSetTodayDate}
@@ -664,35 +675,30 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
                 style={getFieldInputStyle('requestedByName')}
               />
-              <div className="text-[10px] text-slate-500 text-center mt-1">Requestor Signature</div>
             </div>
 
             <div>
               <div className="text-slate-600 mb-6">Noted by:</div>
               <input
                 type="text"
-                placeholder="Supervisor Signature"
                 value={formData.notedByName}
                 onFocus={() => setActiveField('notedByName')}
                 onChange={(e) => handleChange('notedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
                 style={getFieldInputStyle('notedByName')}
               />
-              <div className="text-[10px] text-slate-500 text-center mt-1">R&D / QC Supervisor</div>
             </div>
 
             <div>
               <div className="text-slate-600 mb-6">Received by:</div>
               <input
                 type="text"
-                placeholder="Formulator Signature"
                 value={formData.receivedByName}
                 onFocus={() => setActiveField('receivedByName')}
                 onChange={(e) => handleChange('receivedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
                 style={getFieldInputStyle('receivedByName')}
               />
-              <div className="text-[10px] text-slate-500 text-center mt-1">Formulator / Receiver</div>
             </div>
           </div>
         </div>
