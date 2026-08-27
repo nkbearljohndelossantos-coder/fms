@@ -2,7 +2,7 @@ import { express } from '../cjsRequire.js';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { logAudit } from '../middleware/audit.js';
-import SequenceService from '../services/SequenceService.js';
+import { SequenceService } from '../services/SequenceService.js';
 
 const router = express.Router();
 

@@ -48,3 +48,5 @@ export class SequenceService {
     return `${prefix}-${currentYear}-${paddedVal}`;
   }
 }
+
+export default SequenceService;
