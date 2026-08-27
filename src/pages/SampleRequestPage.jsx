@@ -1,0 +1,568 @@
+import React, { useState, useEffect } from 'react';
+import {
+  FileText,
+  Printer,
+  Save,
+  Send,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Building,
+  User,
+  MapPin,
+  Sparkles,
+  ArrowLeft,
+} from 'lucide-react';
+import RichFontToolbar from '../components/RichFontToolbar';
+import { printSampleRequestForm } from '../utils/printSampleRequestForm';
+import { useAuth } from '../context/AuthContext';
+
+export default function SampleRequestPage({ setCurrentPage }) {
+  const { user } = useAuth();
+
+  const [activeFont, setActiveFont] = useState('Aptos, sans-serif');
+  const [activeFontSize, setActiveFontSize] = useState('14');
+
+  const [formData, setFormData] = useState({
+    revisionNo: 'REV-001',
+    requestDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    companyName: '',
+    address: '',
+    contactPerson: '',
+    productName: '',
+    productClassification: 'Cosmetics',
+    benchmark: '',
+    specificRawMaterials: '',
+    texture: '',
+    form: '',
+    scentAromaDirection: '',
+    colorDescription: '',
+    flavor: '',
+    functionClaims: '',
+    directionOfUse: '',
+    netContent: '',
+    targetPrice: '',
+    specialInstructions: '',
+    quantity: '',
+    primaryPackaging: '',
+    remarks: '',
+    requestedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.username || 'MSM',
+    notedByName: '',
+    receivedByName: '',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitSuccess(null);
+    setSubmitError(null);
+
+    try {
+      const token = localStorage.getItem('nkb_access_token');
+      const res = await fetch('/api/v1/sample-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to submit sample request.');
+      }
+
+      setSubmitSuccess(`Sample Request submitted successfully! Code: ${data.requestCode}`);
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePrint = () => {
+    printSampleRequestForm({
+      request_code: 'SRF-2026-DRAFT',
+      revision_no: formData.revisionNo,
+      request_date: formData.requestDate,
+      company_name: formData.companyName,
+      address: formData.address,
+      contact_person: formData.contactPerson,
+      product_name: formData.productName,
+      product_classification: formData.productClassification,
+      benchmark: formData.benchmark,
+      specific_raw_materials: formData.specificRawMaterials,
+      texture: formData.texture,
+      form: formData.form,
+      scent_aroma_direction: formData.scentAromaDirection,
+      color_description: formData.colorDescription,
+      flavor: formData.flavor,
+      function_claims: formData.functionClaims,
+      direction_of_use: formData.directionOfUse,
+      net_content: formData.netContent,
+      target_price: formData.targetPrice,
+      special_instructions: formData.specialInstructions,
+      quantity: formData.quantity,
+      primary_packaging: formData.primaryPackaging,
+      remarks: formData.remarks,
+      requested_by_name: formData.requestedByName,
+      noted_by_name: formData.notedByName,
+      received_by_name: formData.receivedByName,
+      status: 'PENDING',
+    });
+  };
+
+  return (
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+              <FileText className="w-6 h-6" />
+            </span>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">SAMPLE REQUEST FORM</h1>
+              <p className="text-xs text-slate-500">Client Product Sample Request Specification & Intake Form</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {setCurrentPage && (
+            <button
+              type="button"
+              onClick={() => setCurrentPage('sample-requests-list')}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              View All Requests
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold text-xs shadow-xs transition flex items-center gap-1.5"
+          >
+            <Printer className="w-4 h-4 text-slate-300" />
+            Save as PDF / Print
+          </button>
+        </div>
+      </div>
+
+      {/* Floating Word-Style Rich Font Toolbar */}
+      <div className="sticky top-2 z-20 shadow-md">
+        <RichFontToolbar
+          activeFont={activeFont}
+          onChangeFont={setActiveFont}
+          activeFontSize={activeFontSize}
+          onChangeFontSize={setActiveFontSize}
+        />
+      </div>
+
+      {/* Form Submission Alerts */}
+      {submitSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{submitSuccess}</span>
+        </div>
+      )}
+      {submitError && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{submitError}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* FORM CONTAINER — Exact Replica of Uploaded PDF */}
+        <div
+          className="bg-white border-2 border-slate-900 rounded-xl shadow-md overflow-hidden"
+          style={{ fontFamily: activeFont, fontSize: `${activeFontSize}px` }}
+        >
+          {/* Header Metadata Table */}
+          <div className="grid grid-cols-12 border-b-2 border-slate-900 divide-x-2 divide-slate-900">
+            <div className="col-span-3 p-3 flex items-center justify-center bg-slate-50">
+              <img src="/nkb-logo.png" alt="NKB Logo" className="max-h-12 object-contain" onError={(e) => (e.target.style.display = 'none')} />
+            </div>
+            <div className="col-span-6 p-4 text-center font-extrabold text-lg sm:text-xl tracking-wide flex items-center justify-center bg-white text-slate-900">
+              SAMPLE REQUEST FORM
+            </div>
+            <div className="col-span-3 p-3 bg-slate-50 text-xs font-bold space-y-2 flex flex-col justify-center">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 uppercase">REVISION NO:</span>
+                <input
+                  type="text"
+                  value={formData.revisionNo}
+                  onChange={(e) => handleChange('revisionNo', e.target.value)}
+                  className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 uppercase">DATE:</span>
+                <input
+                  type="text"
+                  value={formData.requestDate}
+                  onChange={(e) => handleChange('requestDate', e.target.value)}
+                  className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* PART I: CLIENT PROFILE */}
+          <div className="bg-slate-400 text-slate-950 font-extrabold text-xs text-center py-2 border-b border-slate-900 tracking-wider">
+            PART I: CLIENT PROFILE
+          </div>
+          <div className="divide-y divide-slate-300 text-xs">
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-3 font-bold text-slate-900 uppercase">COMPANY NAME:</div>
+              <div className="col-span-8 sm:col-span-9">
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter client company name"
+                  value={formData.companyName}
+                  onChange={(e) => handleChange('companyName', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-3 font-bold text-slate-900 uppercase">ADDRESS:</div>
+              <div className="col-span-8 sm:col-span-9">
+                <input
+                  type="text"
+                  placeholder="Enter client address"
+                  value={formData.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-3 font-bold text-slate-900 uppercase">CONTACT PERSON:</div>
+              <div className="col-span-8 sm:col-span-9">
+                <input
+                  type="text"
+                  placeholder="Enter contact person name & phone/email"
+                  value={formData.contactPerson}
+                  onChange={(e) => handleChange('contactPerson', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* PART II: PRODUCT SAMPLE REQUEST SPECIFICATION */}
+          <div className="bg-slate-400 text-slate-950 font-extrabold text-xs text-center py-2 border-t-2 border-b border-slate-900 tracking-wider">
+            PART II: PRODUCT SAMPLE REQUEST SPECIFICATION
+          </div>
+          <div className="divide-y divide-slate-300 text-xs">
+            {/* 1. Name / Description */}
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-4 font-bold text-slate-900 uppercase">1. NAME / DESCRIPTION:</div>
+              <div className="col-span-8 sm:col-span-8">
+                <input
+                  type="text"
+                  required
+                  placeholder="Target product name or description"
+                  value={formData.productName}
+                  onChange={(e) => handleChange('productName', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* 2. Classification of Product */}
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-4 font-bold text-slate-900 uppercase">2. CLASSIFICATION OF PRODUCT:</div>
+              <div className="col-span-8 sm:col-span-8">
+                <select
+                  value={formData.productClassification}
+                  onChange={(e) => handleChange('productClassification', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="Cosmetics">Cosmetics</option>
+                  <option value="Personal Care">Personal Care</option>
+                  <option value="Perfume Concentrate">Perfume Concentrate</option>
+                  <option value="Fine Fragrance">Fine Fragrance</option>
+                  <option value="Food Supplement">Food Supplement</option>
+                  <option value="Household Product">Household Product</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 3. Benchmark If Any */}
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-4 font-bold text-slate-900 uppercase">3. BENCHMARK IF ANY:</div>
+              <div className="col-span-8 sm:col-span-8">
+                <input
+                  type="text"
+                  placeholder="Target benchmark brand or sample reference"
+                  value={formData.benchmark}
+                  onChange={(e) => handleChange('benchmark', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* 4. Detailed Description Header */}
+            <div className="bg-slate-100 p-2.5 font-bold text-slate-900 uppercase tracking-wide">
+              4. DETAILED DESCRIPTION OF PRODUCT
+            </div>
+
+            {/* 4.1 to 4.12 Sub-fields */}
+            <div className="pl-4 sm:pl-6 divide-y divide-slate-200">
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.1 Specific RAW MATERIALS:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Key actives, oils, or target ingredients"
+                    value={formData.specificRawMaterials}
+                    onChange={(e) => handleChange('specificRawMaterials', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.2 Texture:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Creamy, liquid, gel, serum, powder"
+                    value={formData.texture}
+                    onChange={(e) => handleChange('texture', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.3 Form:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Emulsion, solution, lotion, stick"
+                    value={formData.form}
+                    onChange={(e) => handleChange('form', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.4 Scent/Aroma Direction:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Floral, citrus, woody, unscented, fruity"
+                    value={formData.scentAromaDirection}
+                    onChange={(e) => handleChange('scentAromaDirection', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.5 Color Description:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="White, translucent, pink, pale yellow"
+                    value={formData.colorDescription}
+                    onChange={(e) => handleChange('colorDescription', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.6 Flavor:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="N/A or flavor details for lip care/supplements"
+                    value={formData.flavor}
+                    onChange={(e) => handleChange('flavor', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.7 Function/ Claims of Products:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Whitening, moisturizing, anti-aging, SPF"
+                    value={formData.functionClaims}
+                    onChange={(e) => handleChange('functionClaims', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.8 Direction of Products:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Apply to clean face twice daily"
+                    value={formData.directionOfUse}
+                    onChange={(e) => handleChange('directionOfUse', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.9 Net Content:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="50 mL, 100 g, 250 mL"
+                    value={formData.netContent}
+                    onChange={(e) => handleChange('netContent', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.10 Target Price:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="PHP 150.00 / unit or USD 3.00"
+                    value={formData.targetPrice}
+                    onChange={(e) => handleChange('targetPrice', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.11 Special Instruction / Others Specify:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Paraben-free, sulfate-free, vegan"
+                    value={formData.specialInstructions}
+                    onChange={(e) => handleChange('specialInstructions', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">4.12 Quantity:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="e.g., 3 sample jars (100g each)"
+                    value={formData.quantity}
+                    onChange={(e) => handleChange('quantity', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Detailed Description of Packaging */}
+            <div className="bg-slate-100 p-2.5 font-bold text-slate-900 uppercase tracking-wide">
+              5. DETAILED DESCRIPTION OF PACKAGING
+            </div>
+            <div className="pl-4 sm:pl-6">
+              <div className="grid grid-cols-12 p-2 items-center">
+                <div className="col-span-5 sm:col-span-4 font-semibold text-slate-800">5.1 Primary Packaging:</div>
+                <div className="col-span-7 sm:col-span-8">
+                  <input
+                    type="text"
+                    placeholder="Airless pump bottle, glass jar, tube"
+                    value={formData.primaryPackaging}
+                    onChange={(e) => handleChange('primaryPackaging', e.target.value)}
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Remarks */}
+            <div className="grid grid-cols-12 p-2.5 items-center">
+              <div className="col-span-4 sm:col-span-4 font-bold text-slate-900 uppercase">6. REMARKS:</div>
+              <div className="col-span-8 sm:col-span-8">
+                <textarea
+                  rows={2}
+                  placeholder="Additional notes for formulator"
+                  value={formData.remarks}
+                  onChange={(e) => handleChange('remarks', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SIGNATURES ROW */}
+          <div className="grid grid-cols-3 border-t-2 border-slate-900 divide-x-2 divide-slate-900 bg-slate-50 p-4 text-xs font-bold">
+            <div>
+              <div className="text-slate-600 mb-6">Requested by:</div>
+              <input
+                type="text"
+                value={formData.requestedByName}
+                onChange={(e) => handleChange('requestedByName', e.target.value)}
+                className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+              />
+              <div className="text-[10px] text-slate-500 text-center mt-1">Requestor Signature</div>
+            </div>
+
+            <div>
+              <div className="text-slate-600 mb-6">Noted by:</div>
+              <input
+                type="text"
+                placeholder="Supervisor Signature"
+                value={formData.notedByName}
+                onChange={(e) => handleChange('notedByName', e.target.value)}
+                className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+              />
+              <div className="text-[10px] text-slate-500 text-center mt-1">R&D / QC Supervisor</div>
+            </div>
+
+            <div>
+              <div className="text-slate-600 mb-6">Received by:</div>
+              <input
+                type="text"
+                placeholder="Formulator Signature"
+                value={formData.receivedByName}
+                onChange={(e) => handleChange('receivedByName', e.target.value)}
+                className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+              />
+              <div className="text-[10px] text-slate-500 text-center mt-1">Formulator / Receiver</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="px-5 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Print / Save as PDF
+          </button>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            {isSubmitting ? 'Submitting...' : 'Submit Sample Request'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

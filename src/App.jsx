@@ -22,6 +22,8 @@ import { UsersRolesPage } from './pages/UsersRolesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CreateFormulaPage } from './pages/CreateFormulaPage';
 import { CompoundingLogsPage } from './pages/CompoundingLogsPage';
+import SampleRequestPage from './pages/SampleRequestPage';
+import SampleRequestsListPage from './pages/SampleRequestsListPage';
 
 // Compounding Operator Portal Pages
 import { OperatorDashboardPage } from './pages/operator/OperatorDashboardPage';
@@ -91,6 +93,8 @@ export function App() {
       case 'formula-comparison': return { title: 'Formula Comparison', subtitle: 'Side-by-Side Version Diff Tool' };
       case 'qc-inspection': return { title: 'Quality Control Hub', subtitle: 'QC Inspection & Batch Release Sign-Off' };
       case 'compounding-logs': return { title: 'Compounding Code Storage & Repository', subtitle: 'Registry of Used CP-XXXX Codes, Audit Logs & Comparison Tool' };
+      case 'sample-request-form': return { title: 'Sample Request Form', subtitle: 'Client Product Sample Request Specification & Intake Form' };
+      case 'sample-requests-list': return { title: 'Sample Requests Repository', subtitle: 'Client Sample Requests, Review & Approval Hub' };
       case 'operator-dashboard': return { title: 'Compounding Portal', subtitle: 'Shop-Floor Production Execution Station' };
       case 'operator-qr-scanner': return { title: 'QR Scanner', subtitle: 'Formula & Batch QR Code Verification' };
       case 'operator-formula-view': return { title: 'Formula View', subtitle: 'Approved Formulation Specs & Safety Protocols' };
@@ -163,6 +167,8 @@ export function App() {
               {currentPage === 'formula-comparison' && <FormulaComparisonPage setCurrentPage={setCurrentPage} />}
               {currentPage === 'qc-inspection' && <QualityControlPage />}
               {currentPage === 'compounding-logs' && <CompoundingLogsPage setCurrentPage={setCurrentPage} setSelectedBatchId={setSelectedBatchId} />}
+              {currentPage === 'sample-request-form' && <SampleRequestPage setCurrentPage={setCurrentPage} />}
+              {currentPage === 'sample-requests-list' && <SampleRequestsListPage setCurrentPage={setCurrentPage} />}
 
               {/* Operator Portal Views */}
               {currentPage === 'operator-dashboard' && (

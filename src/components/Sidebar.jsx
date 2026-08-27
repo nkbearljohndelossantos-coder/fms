@@ -337,6 +337,32 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 )}
               </div>
 
+              {/* Sample Requests */}
+              <div className="space-y-1 pt-1 border-t border-slate-800/80">
+                <button
+                  onClick={() => setCurrentPage('sample-requests-list')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    isCurrent('sample-requests-list')
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  <span>Sample Requests</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage('sample-request-form')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    isCurrent('sample-request-form')
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <PlusCircle className="w-4 h-4 text-blue-400" />
+                  <span>New Sample Request</span>
+                </button>
+              </div>
+
               {/* Quality Hub */}
               <button
                 onClick={() => setCurrentPage('qc-inspection')}

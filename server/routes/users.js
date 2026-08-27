@@ -29,6 +29,13 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/v1/users/roles - List all roles
 router.get('/roles', authenticateToken, async (req, res) => {
   try {
+    const requestorExists = await db('roles').where({ name: 'Requestor' }).first();
+    if (!requestorExists) {
+      await db('roles').insert({
+        name: 'Requestor',
+        description: 'Client sample request intake and specification creator',
+      }).catch(() => {});
+    }
     const roles = await db('roles').select('*');
     return res.json({ success: true, data: roles });
   } catch (err) {

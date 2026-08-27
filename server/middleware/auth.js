@@ -13,6 +13,7 @@ const ROLE_ALIASES = {
   'Formulation Chemist': ['Formulator'],
   'Reviewer': ['Formulation Chemist', 'Production Supervisor'],
   'Approver': ['Formulation Chemist', 'Production Supervisor', 'QC Specialist'],
+  'Requestor': ['Requestor'],
   'Viewer': ['Compounding Operator', 'QC Specialist'],
 };
 
