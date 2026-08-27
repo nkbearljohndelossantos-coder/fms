@@ -1,16 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   Printer,
-  Save,
   Send,
   CheckCircle,
   AlertCircle,
-  Clock,
-  Building,
-  User,
-  MapPin,
-  Sparkles,
   ArrowLeft,
 } from 'lucide-react';
 import RichFontToolbar from '../components/RichFontToolbar';
@@ -20,8 +14,16 @@ import { useAuth } from '../context/AuthContext';
 export default function SampleRequestPage({ setCurrentPage }) {
   const { user } = useAuth();
 
+  // Formatting state for Rich Text Toolbar
   const [activeFont, setActiveFont] = useState('Aptos, sans-serif');
   const [activeFontSize, setActiveFontSize] = useState('14');
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('#ffffff');
+  const [textAlign, setTextAlign] = useState('left');
 
   const [formData, setFormData] = useState({
     revisionNo: 'REV-001',
@@ -59,11 +61,38 @@ export default function SampleRequestPage({ setCurrentPage }) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Compute inline input style derived from active toolbar settings
+  const inputStyle = {
+    fontFamily: activeFont,
+    fontSize: `${activeFontSize}px`,
+    fontWeight: isBold ? 'bold' : 'normal',
+    fontStyle: isItalic ? 'italic' : 'normal',
+    textDecoration: [isUnderline && 'underline', isStrikethrough && 'line-through'].filter(Boolean).join(' ') || 'none',
+    color: textColor || '#000000',
+    backgroundColor: highlightColor || '#ffffff',
+    textAlign: textAlign || 'left',
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitSuccess(null);
     setSubmitError(null);
+
+    const payload = {
+      ...formData,
+      formattedContentJson: {
+        activeFont,
+        activeFontSize,
+        isBold,
+        isItalic,
+        isUnderline,
+        isStrikethrough,
+        textColor,
+        highlightColor,
+        textAlign,
+      },
+    };
 
     try {
       const token = localStorage.getItem('nkb_access_token');
@@ -73,7 +102,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -118,6 +147,15 @@ export default function SampleRequestPage({ setCurrentPage }) {
       noted_by_name: formData.notedByName,
       received_by_name: formData.receivedByName,
       status: 'PENDING',
+      active_font: activeFont,
+      active_font_size: activeFontSize,
+      is_bold: isBold,
+      is_italic: isItalic,
+      is_underline: isUnderline,
+      is_strikethrough: isStrikethrough,
+      text_color: textColor,
+      highlight_color: highlightColor,
+      text_align: textAlign,
     });
   };
 
@@ -160,12 +198,26 @@ export default function SampleRequestPage({ setCurrentPage }) {
       </div>
 
       {/* Floating Word-Style Rich Font Toolbar */}
-      <div className="sticky top-2 z-20 shadow-md">
+      <div className="sticky top-2 z-30 shadow-md">
         <RichFontToolbar
           activeFont={activeFont}
           onChangeFont={setActiveFont}
           activeFontSize={activeFontSize}
           onChangeFontSize={setActiveFontSize}
+          isBold={isBold}
+          onToggleBold={() => setIsBold(!isBold)}
+          isItalic={isItalic}
+          onToggleItalic={() => setIsItalic(!isItalic)}
+          isUnderline={isUnderline}
+          onToggleUnderline={() => setIsUnderline(!isUnderline)}
+          isStrikethrough={isStrikethrough}
+          onToggleStrikethrough={() => setIsStrikethrough(!isStrikethrough)}
+          textColor={textColor}
+          onChangeTextColor={setTextColor}
+          highlightColor={highlightColor}
+          onChangeHighlightColor={setHighlightColor}
+          textAlign={textAlign}
+          onChangeTextAlign={setTextAlign}
         />
       </div>
 
@@ -185,10 +237,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* FORM CONTAINER — Exact Replica of Uploaded PDF */}
-        <div
-          className="bg-white border-2 border-slate-900 rounded-xl shadow-md overflow-hidden"
-          style={{ fontFamily: activeFont, fontSize: `${activeFontSize}px` }}
-        >
+        <div className="bg-white border-2 border-slate-900 rounded-xl shadow-md overflow-hidden">
           {/* Header Metadata Table */}
           <div className="grid grid-cols-12 border-b-2 border-slate-900 divide-x-2 divide-slate-900">
             <div className="col-span-3 p-3 flex items-center justify-center bg-slate-50">
@@ -205,6 +254,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   value={formData.revisionNo}
                   onChange={(e) => handleChange('revisionNo', e.target.value)}
                   className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
+                  style={inputStyle}
                 />
               </div>
               <div className="flex items-center gap-1.5">
@@ -214,6 +264,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   value={formData.requestDate}
                   onChange={(e) => handleChange('requestDate', e.target.value)}
                   className="w-full px-2 py-0.5 border border-slate-300 rounded font-bold text-slate-900 focus:bg-amber-50"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -233,7 +284,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Enter client company name"
                   value={formData.companyName}
                   onChange={(e) => handleChange('companyName', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -245,7 +297,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Enter client address"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -257,7 +310,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Enter contact person name & phone/email"
                   value={formData.contactPerson}
                   onChange={(e) => handleChange('contactPerson', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -278,7 +332,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Target product name or description"
                   value={formData.productName}
                   onChange={(e) => handleChange('productName', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -290,7 +345,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 <select
                   value={formData.productClassification}
                   onChange={(e) => handleChange('productClassification', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  style={inputStyle}
                 >
                   <option value="Cosmetics">Cosmetics</option>
                   <option value="Personal Care">Personal Care</option>
@@ -311,7 +367,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Target benchmark brand or sample reference"
                   value={formData.benchmark}
                   onChange={(e) => handleChange('benchmark', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -331,7 +388,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Key actives, oils, or target ingredients"
                     value={formData.specificRawMaterials}
                     onChange={(e) => handleChange('specificRawMaterials', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -343,7 +401,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Creamy, liquid, gel, serum, powder"
                     value={formData.texture}
                     onChange={(e) => handleChange('texture', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -355,7 +414,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Emulsion, solution, lotion, stick"
                     value={formData.form}
                     onChange={(e) => handleChange('form', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -367,7 +427,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Floral, citrus, woody, unscented, fruity"
                     value={formData.scentAromaDirection}
                     onChange={(e) => handleChange('scentAromaDirection', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -379,7 +440,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="White, translucent, pink, pale yellow"
                     value={formData.colorDescription}
                     onChange={(e) => handleChange('colorDescription', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -391,7 +453,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="N/A or flavor details for lip care/supplements"
                     value={formData.flavor}
                     onChange={(e) => handleChange('flavor', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -403,7 +466,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Whitening, moisturizing, anti-aging, SPF"
                     value={formData.functionClaims}
                     onChange={(e) => handleChange('functionClaims', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -415,7 +479,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Apply to clean face twice daily"
                     value={formData.directionOfUse}
                     onChange={(e) => handleChange('directionOfUse', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -427,7 +492,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="50 mL, 100 g, 250 mL"
                     value={formData.netContent}
                     onChange={(e) => handleChange('netContent', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -439,7 +505,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="PHP 150.00 / unit or USD 3.00"
                     value={formData.targetPrice}
                     onChange={(e) => handleChange('targetPrice', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -451,7 +518,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Paraben-free, sulfate-free, vegan"
                     value={formData.specialInstructions}
                     onChange={(e) => handleChange('specialInstructions', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -463,7 +531,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="e.g., 3 sample jars (100g each)"
                     value={formData.quantity}
                     onChange={(e) => handleChange('quantity', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -482,7 +551,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                     placeholder="Airless pump bottle, glass jar, tube"
                     value={formData.primaryPackaging}
                     onChange={(e) => handleChange('primaryPackaging', e.target.value)}
-                    className="w-full px-2.5 py-1 border border-slate-300 rounded text-slate-900"
+                    className="w-full px-2.5 py-1 border border-slate-300 rounded"
+                    style={inputStyle}
                   />
                 </div>
               </div>
@@ -497,7 +567,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
                   placeholder="Additional notes for formulator"
                   value={formData.remarks}
                   onChange={(e) => handleChange('remarks', e.target.value)}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -512,6 +583,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 value={formData.requestedByName}
                 onChange={(e) => handleChange('requestedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+                style={inputStyle}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">Requestor Signature</div>
             </div>
@@ -524,6 +596,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 value={formData.notedByName}
                 onChange={(e) => handleChange('notedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+                style={inputStyle}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">R&D / QC Supervisor</div>
             </div>
@@ -536,6 +609,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 value={formData.receivedByName}
                 onChange={(e) => handleChange('receivedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
+                style={inputStyle}
               />
               <div className="text-[10px] text-slate-500 text-center mt-1">Formulator / Receiver</div>
             </div>

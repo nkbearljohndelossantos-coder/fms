@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Bold,
   Italic,
@@ -10,9 +10,9 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
-  Palette,
   Highlighter,
   Type,
+  Check,
 } from 'lucide-react';
 
 const FONT_FAMILIES = [
@@ -28,14 +28,58 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = ['10', '11', '12', '14', '16', '18', '20', '24', '28', '36'];
 
-const TEXT_COLORS = ['#000000', '#1e293b', '#2563eb', '#059669', '#dc2626', '#d97706', '#7c3aed', '#475569'];
-const HILITE_COLORS = ['#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#fbcfe8', '#fed7aa', '#e2e8f0'];
+const TEXT_COLORS = [
+  '#000000', '#1e293b', '#2563eb', '#059669',
+  '#dc2626', '#d97706', '#7c3aed', '#475569',
+  '#0284c7', '#0891b2', '#0d9488', '#16a34a',
+  '#ca8a04', '#ea580c', '#e11d48', '#9333ea',
+];
 
-export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSize, onChangeFontSize }) {
-  const [selectedColor, setSelectedColor] = useState('#000000');
-  const [selectedHighlight, setSelectedHighlight] = useState('#fef08a');
+const HILITE_COLORS = [
+  '#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe',
+  '#fbcfe8', '#fed7aa', '#e2e8f0', '#ddd6fe',
+  '#fef3c7', '#dcfce7', '#e0f2fe', '#f3e8ff',
+];
+
+export default function RichFontToolbar({
+  activeFont,
+  onChangeFont,
+  activeFontSize,
+  onChangeFontSize,
+  isBold,
+  onToggleBold,
+  isItalic,
+  onToggleItalic,
+  isUnderline,
+  onToggleUnderline,
+  isStrikethrough,
+  onToggleStrikethrough,
+  textColor,
+  onChangeTextColor,
+  highlightColor,
+  onChangeHighlightColor,
+  textAlign,
+  onChangeTextAlign,
+}) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+
+  const colorPickerRef = useRef(null);
+  const highlightPickerRef = useRef(null);
+
+  // Close color pickers when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
+        setShowColorPicker(false);
+      }
+      if (highlightPickerRef.current && !highlightPickerRef.current.contains(event.target)) {
+        setShowHighlightPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const execCommand = (cmd, val = null) => {
     try {
@@ -50,7 +94,7 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
 
   const handleFontSizeChange = (sizePx) => {
     onChangeFontSize?.(sizePx);
-    execCommand('fontSize', '4'); // intermediate
+    execCommand('fontSize', '4');
   };
 
   const handleIncreaseFontSize = () => {
@@ -65,20 +109,20 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
     onChangeFontSize?.(String(next));
   };
 
-  const handleTextColor = (color) => {
-    setSelectedColor(color);
+  const handleTextColorSelect = (color) => {
+    onChangeTextColor?.(color);
     execCommand('foreColor', color);
     setShowColorPicker(false);
   };
 
-  const handleHighlightColor = (color) => {
-    setSelectedHighlight(color);
+  const handleHighlightColorSelect = (color) => {
+    onChangeHighlightColor?.(color);
     execCommand('hiliteColor', color);
     setShowHighlightPicker(false);
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100 border border-slate-300 rounded-xl text-xs font-sans shadow-sm select-none print:hidden">
+    <div className="relative z-30 flex flex-wrap items-center gap-1.5 p-2 bg-slate-100/95 backdrop-blur-md border border-slate-300 rounded-xl text-xs font-sans shadow-md select-none print:hidden">
       {/* Font Family Selector */}
       <select
         value={activeFont || FONT_FAMILIES[0].value}
@@ -98,7 +142,7 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
         value={activeFontSize || '14'}
         onChange={(e) => handleFontSizeChange(e.target.value)}
         className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
-        title="Font Size"
+        title="Font Size (pt/px)"
       >
         {FONT_SIZES.map((sz) => (
           <option key={sz} value={sz}>
@@ -129,36 +173,56 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
 
       <div className="w-px h-5 bg-slate-300 mx-0.5" />
 
-      {/* Basic Formatting Buttons (B, I, U, ab, x2, x^2) */}
+      {/* Basic Formatting Buttons (B, I, U, ab) */}
       <div className="flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden shadow-2xs">
         <button
           type="button"
-          onClick={() => execCommand('bold')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition font-extrabold"
+          onClick={() => {
+            onToggleBold?.();
+            execCommand('bold');
+          }}
+          className={`p-1.5 transition font-extrabold ${
+            isBold ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Bold (Ctrl+B)"
         >
           <Bold className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('italic')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onToggleItalic?.();
+            execCommand('italic');
+          }}
+          className={`p-1.5 transition ${
+            isItalic ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Italic (Ctrl+I)"
         >
           <Italic className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('underline')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onToggleUnderline?.();
+            execCommand('underline');
+          }}
+          className={`p-1.5 transition ${
+            isUnderline ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Underline (Ctrl+U)"
         >
           <Underline className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('strikeThrough')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onToggleStrikethrough?.();
+            execCommand('strikeThrough');
+          }}
+          className={`p-1.5 transition ${
+            isStrikethrough ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Strikethrough"
         >
           <Strikethrough className="w-4 h-4" />
@@ -186,56 +250,72 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
 
       <div className="w-px h-5 bg-slate-300 mx-0.5" />
 
-      {/* Text & Highlight Color Pickers */}
-      <div className="flex items-center gap-1 relative">
+      {/* Text & Highlight Color Pickers with Clean Popovers */}
+      <div className="flex items-center gap-1.5">
         {/* Text Color Button */}
-        <div className="relative">
+        <div className="relative" ref={colorPickerRef}>
           <button
             type="button"
-            onClick={() => setShowColorPicker(!showColorPicker)}
-            className="p-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-800 flex items-center gap-1 shadow-2xs"
+            onClick={() => {
+              setShowColorPicker(!showColorPicker);
+              setShowHighlightPicker(false);
+            }}
+            className="p-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 shadow-2xs"
             title="Text Color"
           >
             <Type className="w-4 h-4" />
-            <span className="w-3 h-1 rounded-full" style={{ backgroundColor: selectedColor }} />
+            <span className="w-3.5 h-1.5 rounded-full border border-slate-300" style={{ backgroundColor: textColor || '#000000' }} />
           </button>
           {showColorPicker && (
-            <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-slate-300 rounded-lg shadow-lg z-30 grid grid-cols-4 gap-1">
-              {TEXT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleTextColor(c)}
-                  className="w-5 h-5 rounded border border-slate-300 hover:scale-110 transition"
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+            <div className="absolute top-full left-0 mt-2 p-2.5 bg-white border border-slate-300 rounded-xl shadow-2xl z-50 min-w-[170px]">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Text Color</span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleTextColorSelect(c)}
+                    className="w-6 h-6 rounded-md border border-slate-300 flex items-center justify-center hover:scale-110 transition shadow-2xs"
+                    style={{ backgroundColor: c }}
+                  >
+                    {textColor === c && <Check className="w-3 h-3 text-white drop-shadow-md" />}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Highlight Color Button */}
-        <div className="relative">
+        <div className="relative" ref={highlightPickerRef}>
           <button
             type="button"
-            onClick={() => setShowHighlightPicker(!showHighlightPicker)}
-            className="p-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-800 flex items-center gap-1 shadow-2xs"
+            onClick={() => {
+              setShowHighlightPicker(!showHighlightPicker);
+              setShowColorPicker(false);
+            }}
+            className="p-1.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-800 flex items-center gap-1.5 shadow-2xs"
             title="Highlight Color"
           >
             <Highlighter className="w-4 h-4 text-amber-600" />
-            <span className="w-3 h-1 rounded-full" style={{ backgroundColor: selectedHighlight }} />
+            <span className="w-3.5 h-1.5 rounded-full border border-slate-300" style={{ backgroundColor: highlightColor || '#ffffff' }} />
           </button>
           {showHighlightPicker && (
-            <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-slate-300 rounded-lg shadow-lg z-30 grid grid-cols-4 gap-1">
-              {HILITE_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleHighlightColor(c)}
-                  className="w-5 h-5 rounded border border-slate-300 hover:scale-110 transition"
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+            <div className="absolute top-full left-0 mt-2 p-2.5 bg-white border border-slate-300 rounded-xl shadow-2xl z-50 min-w-[170px]">
+              <span className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Highlight Color</span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {HILITE_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => handleHighlightColorSelect(c)}
+                    className="w-6 h-6 rounded-md border border-slate-300 flex items-center justify-center hover:scale-110 transition shadow-2xs"
+                    style={{ backgroundColor: c }}
+                  >
+                    {highlightColor === c && <Check className="w-3 h-3 text-slate-800" />}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -247,32 +327,52 @@ export default function RichFontToolbar({ activeFont, onChangeFont, activeFontSi
       <div className="flex items-center bg-white border border-slate-300 rounded-lg overflow-hidden shadow-2xs">
         <button
           type="button"
-          onClick={() => execCommand('justifyLeft')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onChangeTextAlign?.('left');
+            execCommand('justifyLeft');
+          }}
+          className={`p-1.5 transition ${
+            textAlign === 'left' ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Align Left"
         >
           <AlignLeft className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('justifyCenter')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onChangeTextAlign?.('center');
+            execCommand('justifyCenter');
+          }}
+          className={`p-1.5 transition ${
+            textAlign === 'center' ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Align Center"
         >
           <AlignCenter className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('justifyRight')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onChangeTextAlign?.('right');
+            execCommand('justifyRight');
+          }}
+          className={`p-1.5 transition ${
+            textAlign === 'right' ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Align Right"
         >
           <AlignRight className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => execCommand('justifyFull')}
-          className="p-1.5 hover:bg-slate-100 text-slate-800 transition"
+          onClick={() => {
+            onChangeTextAlign?.('justify');
+            execCommand('justifyFull');
+          }}
+          className={`p-1.5 transition ${
+            textAlign === 'justify' ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-800'
+          }`}
           title="Justify"
         >
           <AlignJustify className="w-4 h-4" />
