@@ -94,6 +94,38 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/v1/sample-requests/notifications - Notification bell count & recent pending requests
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const userRole = (req.user?.role || '').toLowerCase();
+    const isRequestorOnly = userRole.includes('requestor') && !userRole.includes('admin') && !userRole.includes('formulator');
+
+    const countQuery = db('sample_requests').where('status', 'PENDING');
+    const recentQuery = db('sample_requests')
+      .where('status', 'PENDING')
+      .select('id', 'request_code', 'company_name', 'product_name', 'request_date', 'requested_by_name', 'created_at')
+      .orderBy('id', 'desc')
+      .limit(8);
+
+    if (isRequestorOnly) {
+      countQuery.andWhere('requested_by_user_id', req.user.id);
+      recentQuery.andWhere('requested_by_user_id', req.user.id);
+    }
+
+    const pendingCountRes = await countQuery.count('id as count').first();
+    const recentPending = await recentQuery;
+
+    return res.json({
+      success: true,
+      pendingCount: parseInt(pendingCountRes?.count || 0, 10),
+      recentPending,
+    });
+  } catch (err) {
+    console.error('Error fetching sample request notifications:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch notifications.', error: err.message });
+  }
+});
+
 // GET /api/v1/sample-requests/:id - Get single sample request details
 router.get('/:id', authenticateToken, async (req, res) => {
   try {

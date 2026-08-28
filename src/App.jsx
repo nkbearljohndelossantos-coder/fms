@@ -129,7 +129,7 @@ export function App() {
 
       {/* Light Theme Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
-        <Header title={title} subtitle={subtitle} />
+        <Header title={title} subtitle={subtitle} setCurrentPage={setCurrentPage} />
         <main className="flex-1 overflow-y-auto bg-slate-50 text-slate-900 pb-20 lg:pb-0">
           {isDenied ? (
             <div className="p-8 max-w-xl mx-auto mt-12 text-center space-y-4">
