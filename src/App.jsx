@@ -24,6 +24,7 @@ import { CreateFormulaPage } from './pages/CreateFormulaPage';
 import { CompoundingLogsPage } from './pages/CompoundingLogsPage';
 import SampleRequestPage from './pages/SampleRequestPage';
 import SampleRequestsListPage from './pages/SampleRequestsListPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 // Compounding Operator Portal Pages
 import { OperatorDashboardPage } from './pages/operator/OperatorDashboardPage';
@@ -43,6 +44,7 @@ export function App() {
   const isPerfumeUser = user?.username?.toLowerCase().includes('perfume') ||
                         user?.email?.toLowerCase().includes('perfume') ||
                         user?.role?.toLowerCase().includes('perfume');
+  const isRequestor = (user?.role || '').toLowerCase().includes('requestor');
 
   useEffect(() => {
     if (user) {
@@ -50,6 +52,8 @@ export function App() {
         setCurrentPage('operator-dashboard');
       } else if (user.role === 'QC Specialist') {
         setCurrentPage('qc-inspection');
+      } else if (isRequestor) {
+        setCurrentPage('sample-requests-list');
       } else if (isPerfumeUser) {
         setCurrentPage('formulation-perfume-no-brand');
       } else if (user.role === 'Formulation Chemist') {
@@ -73,8 +77,16 @@ export function App() {
     'operator-history',
   ];
 
+  const requestorAllowedPages = [
+    'sample-requests-list',
+    'sample-request-form',
+    'change-password',
+  ];
+
   const isCosmeticDenied = isPerfumeUser && currentPage === 'formulation-cosmetic';
-  const isDenied = (isOperator && !operatorAllowedPages.includes(currentPage)) || isCosmeticDenied;
+  const isDenied = (isOperator && !operatorAllowedPages.includes(currentPage)) ||
+                   (isRequestor && !requestorAllowedPages.includes(currentPage)) ||
+                   isCosmeticDenied;
 
   const getPageTitle = () => {
     switch (currentPage) {
@@ -103,6 +115,7 @@ export function App() {
       case 'reports': return { title: 'Reports', subtitle: 'PDF & Excel export hub' };
       case 'users-roles': return { title: 'Users & Roles', subtitle: 'Role-Based Access Control' };
       case 'settings': return { title: 'Settings', subtitle: 'Tolerances & Precision Settings' };
+      case 'change-password': return { title: 'Change Password', subtitle: 'Update User Account Login Credentials' };
       default: return { title: 'Enterprise Formulation Management System', subtitle: '' };
     }
   };
@@ -190,6 +203,7 @@ export function App() {
               {currentPage === 'reports' && <ReportsPage />}
               {currentPage === 'users-roles' && <UsersRolesPage />}
               {currentPage === 'settings' && <SettingsPage />}
+              {currentPage === 'change-password' && <ChangePasswordPage />}
             </>
           )}
         </main>

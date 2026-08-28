@@ -240,6 +240,51 @@ router.post('/signatures/challenge', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/v1/auth/change-password
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+    }
+
+    const user = await db('users').where({ id: req.user.userId }).first();
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Incorrect current password.' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await db('users').where({ id: user.id }).update({
+      password_hash: newHash,
+      updated_at: new Date(),
+    });
+
+    await db.transaction(async (trx) => {
+      await AuditService.logEvent({
+        trx,
+        userId: req.user.userId,
+        userRole: req.user.roles[0] || 'User',
+        action: 'PASSWORD_CHANGED',
+        entityType: 'User',
+        entityId: req.user.userId,
+      });
+    });
+
+    return res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to change password.', error: err.message });
+  }
+});
+
 // GET /api/v1/auth/me
 router.get('/me', authenticateToken, async (req, res) => {
   return res.json({ success: true, user: req.user });

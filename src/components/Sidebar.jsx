@@ -25,6 +25,7 @@ import {
   X,
   LogOut,
   MoreHorizontal,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,6 +38,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
 
   const isCurrent = (page) => currentPage === page;
   const isOperator = user?.role === 'Compounding Operator';
+  const isRequestor = (user?.role || '').toLowerCase().includes('requestor');
   const isPerfumeUser = user?.username?.toLowerCase().includes('perfume') ||
                         user?.email?.toLowerCase().includes('perfume') ||
                         user?.role?.toLowerCase().includes('perfume');
@@ -71,7 +73,46 @@ export function Sidebar({ currentPage, setCurrentPage }) {
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1 text-sm font-medium">
-          {isOperator ? (
+          {isRequestor ? (
+            /* REQUESTOR PORTAL NAVIGATION — STRICTLY ONLY SAMPLE REQUESTS & CHANGE PASSWORD */
+            <>
+              <button
+                onClick={() => setCurrentPage('sample-requests-list')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isCurrent('sample-requests-list')
+                    ? 'bg-blue-600 text-white font-semibold'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <FileText className="w-4 h-4 text-blue-400" />
+                <span>Sample Requests</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentPage('sample-request-form')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isCurrent('sample-request-form')
+                    ? 'bg-blue-600 text-white font-semibold'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <PlusCircle className="w-4 h-4 text-emerald-400" />
+                <span>New Sample Request</span>
+              </button>
+
+              <button
+                onClick={() => setCurrentPage('change-password')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isCurrent('change-password')
+                    ? 'bg-blue-600 text-white font-semibold'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <KeyRound className="w-4 h-4 text-amber-400" />
+                <span>Change Password</span>
+              </button>
+            </>
+          ) : isOperator ? (
             /* OPERATOR PORTAL NAVIGATION */
             <>
               <button
@@ -414,6 +455,19 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>Settings</span>
               </button>
+
+              {/* Change Password */}
+              <button
+                onClick={() => setCurrentPage('change-password')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isCurrent('change-password')
+                    ? 'bg-blue-600 text-white font-semibold'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <KeyRound className="w-4 h-4 text-amber-400" />
+                <span>Change Password</span>
+              </button>
             </>
           )}
         </nav>
@@ -433,58 +487,99 @@ export function Sidebar({ currentPage, setCurrentPage }) {
       {/* 2. RESPONSIVE MOBILE NAVIGATION BAR (Fixed at bottom on mobile views) */}
       {/* ========================================================================= */}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 z-50 flex lg:hidden justify-around items-center px-2 select-none shadow-xl">
-        {/* Tab 1: Home / Dashboard */}
-        <button
-          onClick={() => handleMobileNav(isOperator ? 'operator-dashboard' : 'dashboard')}
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
-            isCurrent('dashboard') || isCurrent('operator-dashboard') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[9px] mt-1 truncate">Dashboard</span>
-        </button>
+        {isRequestor ? (
+          <>
+            <button
+              onClick={() => handleMobileNav('sample-requests-list')}
+              className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition ${
+                isCurrent('sample-requests-list') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-[9px] mt-1 truncate">Requests</span>
+            </button>
+            <button
+              onClick={() => handleMobileNav('sample-request-form')}
+              className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition ${
+                isCurrent('sample-request-form') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <PlusCircle className="w-5 h-5 text-emerald-400" />
+              <span className="text-[9px] mt-1 truncate">New</span>
+            </button>
+            <button
+              onClick={() => handleMobileNav('change-password')}
+              className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition ${
+                isCurrent('change-password') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <KeyRound className="w-5 h-5 text-amber-400" />
+              <span className="text-[9px] mt-1 truncate">Pass</span>
+            </button>
+            <button
+              onClick={logout}
+              className="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-rose-400 hover:text-rose-300"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-[9px] mt-1 truncate">Logout</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Tab 1: Home / Dashboard */}
+            <button
+              onClick={() => handleMobileNav(isOperator ? 'operator-dashboard' : 'dashboard')}
+              className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
+                isCurrent('dashboard') || isCurrent('operator-dashboard') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-[9px] mt-1 truncate">Dashboard</span>
+            </button>
 
-        {/* Tab 2: Materials / QR Scanner */}
-        <button
-          onClick={() => handleMobileNav(isOperator ? 'operator-qr-scanner' : 'materials-list')}
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
-            isCurrent('materials-list') || isCurrent('operator-qr-scanner') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {isOperator ? <QrCode className="w-5 h-5" /> : <Boxes className="w-5 h-5" />}
-          <span className="text-[9px] mt-1 truncate">{isOperator ? 'Scan QR' : 'Materials'}</span>
-        </button>
+            {/* Tab 2: Materials / QR Scanner */}
+            <button
+              onClick={() => handleMobileNav(isOperator ? 'operator-qr-scanner' : 'materials-list')}
+              className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
+                isCurrent('materials-list') || isCurrent('operator-qr-scanner') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {isOperator ? <QrCode className="w-5 h-5" /> : <Boxes className="w-5 h-5" />}
+              <span className="text-[9px] mt-1 truncate">{isOperator ? 'Scan QR' : 'Materials'}</span>
+            </button>
 
-        {/* Tab 3: Formulations Workspace / Compounding Screen */}
-        <button
-          onClick={() => handleMobileNav(isOperator ? 'operator-compounding-screen' : (isPerfumeUser ? 'formulation-perfume-no-brand' : 'formulation-cosmetic'))}
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
-            isCurrent('formulation-cosmetic') || isCurrent('formulation-perfume-no-brand') || isCurrent('operator-compounding-screen') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {isOperator ? <Play className="w-5 h-5" /> : <FlaskConical className="w-5 h-5" />}
-          <span className="text-[9px] mt-1 truncate">{isOperator ? 'Compounding' : 'Workspace'}</span>
-        </button>
+            {/* Tab 3: Formulations Workspace / Compounding Screen */}
+            <button
+              onClick={() => handleMobileNav(isOperator ? 'operator-compounding-screen' : (isPerfumeUser ? 'formulation-perfume-no-brand' : 'formulation-cosmetic'))}
+              className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
+                isCurrent('formulation-cosmetic') || isCurrent('formulation-perfume-no-brand') || isCurrent('operator-compounding-screen') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {isOperator ? <Play className="w-5 h-5" /> : <FlaskConical className="w-5 h-5" />}
+              <span className="text-[9px] mt-1 truncate">{isOperator ? 'Compounding' : 'Workspace'}</span>
+            </button>
 
-        {/* Tab 4: Production MES / History */}
-        <button
-          onClick={() => handleMobileNav(isOperator ? 'operator-history' : 'batch-calculator')}
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
-            isCurrent('batch-calculator') || isCurrent('operator-history') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {isOperator ? <History className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
-          <span className="text-[9px] mt-1 truncate">{isOperator ? 'History' : 'Batch Math'}</span>
-        </button>
+            {/* Tab 4: Production MES / History */}
+            <button
+              onClick={() => handleMobileNav(isOperator ? 'operator-history' : 'batch-calculator')}
+              className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition ${
+                isCurrent('batch-calculator') || isCurrent('operator-history') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {isOperator ? <History className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
+              <span className="text-[9px] mt-1 truncate">{isOperator ? 'History' : 'Batch Math'}</span>
+            </button>
 
-        {/* Tab 5: More Menu Button */}
-        <button
-          onClick={() => setMobileMoreOpen(true)}
-          className="flex flex-col items-center justify-center w-12 h-12 rounded-xl text-slate-400 hover:text-slate-200"
-        >
-          <MoreHorizontal className="w-5 h-5" />
-          <span className="text-[9px] mt-1 truncate">More</span>
-        </button>
+            {/* Tab 5: More Menu Button */}
+            <button
+              onClick={() => setMobileMoreOpen(true)}
+              className="flex flex-col items-center justify-center w-12 h-12 rounded-xl text-slate-400 hover:text-slate-200"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+              <span className="text-[9px] mt-1 truncate">More</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* ========================================================================= */}
