@@ -46,7 +46,8 @@ export function printSampleRequestForm(data = {}) {
     const isStrikethrough = s.isStrikethrough || false;
     const textColor = s.textColor || '#000000';
     const highlightColor = s.highlightColor || 'transparent';
-    const textAlign = s.textAlign || 'left';
+    const isSig = fieldName === 'requestedByName' || fieldName === 'notedByName' || fieldName === 'receivedByName';
+    const textAlign = s.textAlign || (isSig ? 'center' : 'left');
 
     return `
       font-family: ${fontFamily};

@@ -122,6 +122,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
   // Helper to compute inline HTML input style for a given field
   const getFieldInputStyle = (fieldName) => {
     const s = fieldStyles[fieldName] || DEFAULT_STYLE;
+    const isSig = fieldName === 'requestedByName' || fieldName === 'notedByName' || fieldName === 'receivedByName';
     return {
       fontFamily: s.fontFamily || DEFAULT_STYLE.fontFamily,
       fontSize: `${s.fontSize || DEFAULT_STYLE.fontSize}px`,
@@ -130,7 +131,7 @@ export default function SampleRequestPage({ setCurrentPage }) {
       textDecoration: [s.isUnderline && 'underline', s.isStrikethrough && 'line-through'].filter(Boolean).join(' ') || 'none',
       color: s.textColor || '#000000',
       backgroundColor: s.highlightColor || '#ffffff',
-      textAlign: s.textAlign || 'left',
+      textAlign: s.textAlign || (isSig ? 'center' : 'left'),
     };
   };
 
