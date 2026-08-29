@@ -664,8 +664,8 @@ export default function SampleRequestPage({ setCurrentPage }) {
             </div>
           </div>
 
-          {/* SIGNATURES ROW */}
-          <div className="grid grid-cols-3 border-t-2 border-slate-900 divide-x-2 divide-slate-900 bg-slate-50 p-4 text-xs font-bold">
+          {/* SIGNATURES ROW — 2 COLUMNS (Requested by & Received by) */}
+          <div className="grid grid-cols-2 border-t-2 border-slate-900 divide-x-2 divide-slate-900 bg-slate-50 p-4 text-xs font-bold">
             <div>
               <div className="text-slate-600 mb-6">Requested by:</div>
               <input
@@ -675,18 +675,6 @@ export default function SampleRequestPage({ setCurrentPage }) {
                 onChange={(e) => handleChange('requestedByName', e.target.value)}
                 className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
                 style={getFieldInputStyle('requestedByName')}
-              />
-            </div>
-
-            <div>
-              <div className="text-slate-600 mb-6">Noted by:</div>
-              <input
-                type="text"
-                value={formData.notedByName}
-                onFocus={() => setActiveField('notedByName')}
-                onChange={(e) => handleChange('notedByName', e.target.value)}
-                className="w-full px-2 py-1 border-b border-slate-900 bg-transparent font-bold text-slate-900 text-center"
-                style={getFieldInputStyle('notedByName')}
               />
             </div>
 

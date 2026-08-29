@@ -317,7 +317,7 @@ router.put('/:id/approve', authenticateToken, async (req, res) => {
       approved_by_user_id: req.user.id,
       approved_by_name: reviewerName,
       approved_at: db.fn.now(),
-      noted_by_name: existing.noted_by_name || reviewerName,
+      received_by_name: reviewerName,
       updated_at: db.fn.now(),
     });
 
