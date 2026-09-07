@@ -53,8 +53,8 @@ router.get('/raw-materials', authenticateToken, requirePermission('inventory.vie
       .where('inventory_items.item_type', 'RAW_MATERIAL')
       .select(
         'inventory_items.*',
-        'materials.code as material_code',
-        'materials.name as material_name',
+        db.raw('COALESCE(materials.code, inventory_items.lot_number) as material_code'),
+        db.raw('COALESCE(inventory_items.item_name, materials.name) as material_name'),
         'materials.category as material_group',
         'materials.description as inci_name',
         'vendors.name as vendor_name',
@@ -70,13 +70,18 @@ router.get('/raw-materials', authenticateToken, requirePermission('inventory.vie
     if (search) {
       query.andWhere(b => {
         b.where('materials.name', 'like', `%${search}%`)
+         .orWhere('inventory_items.item_name', 'like', `%${search}%`)
          .orWhere('materials.code', 'like', `%${search}%`)
          .orWhere('inventory_items.lot_number', 'like', `%${search}%`)
          .orWhere('inventory_items.supplier_lot_number', 'like', `%${search}%`);
       });
     }
 
-    const items = await query.orderBy('inventory_items.updated_at', 'desc');
+    const rawItems = await query.orderBy('inventory_items.updated_at', 'desc');
+    const items = rawItems.map(i => ({
+      ...i,
+      material_name: i.material_name || i.item_name || 'Unnamed Item',
+    }));
     return res.json({ success: true, data: items });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch raw material inventory.', error: err.message });
@@ -94,8 +99,8 @@ router.get('/packaging', authenticateToken, requirePermission('inventory.view'),
       .where('inventory_items.item_type', 'PACKAGING')
       .select(
         'inventory_items.*',
-        'materials.code as material_code',
-        'materials.name as material_name',
+        db.raw('COALESCE(materials.code, inventory_items.lot_number) as material_code'),
+        db.raw('COALESCE(inventory_items.item_name, materials.name) as material_name'),
         'materials.category as packaging_group',
         'vendors.name as vendor_name'
       );
@@ -109,12 +114,17 @@ router.get('/packaging', authenticateToken, requirePermission('inventory.view'),
     if (search) {
       query.andWhere(b => {
         b.where('materials.name', 'like', `%${search}%`)
+         .orWhere('inventory_items.item_name', 'like', `%${search}%`)
          .orWhere('materials.code', 'like', `%${search}%`)
          .orWhere('inventory_items.lot_number', 'like', `%${search}%`);
       });
     }
 
-    const items = await query.orderBy('inventory_items.updated_at', 'desc');
+    const rawItems = await query.orderBy('inventory_items.updated_at', 'desc');
+    const items = rawItems.map(i => ({
+      ...i,
+      material_name: i.material_name || i.item_name || 'Unnamed Item',
+    }));
     return res.json({ success: true, data: items });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch packaging material inventory.', error: err.message });
@@ -133,8 +143,8 @@ router.get('/finished-products', authenticateToken, requirePermission('inventory
       .where('inventory_items.item_type', 'FINISHED_GOODS')
       .select(
         'inventory_items.*',
-        'formulas.code as product_code',
-        'formulas.name as product_name',
+        db.raw('COALESCE(formulas.code, inventory_items.lot_number) as product_code'),
+        db.raw('COALESCE(inventory_items.item_name, formulas.name) as product_name'),
         'formula_versions.compounding_code',
         'formula_versions.major_version',
         'formula_versions.minor_version',
@@ -152,13 +162,18 @@ router.get('/finished-products', authenticateToken, requirePermission('inventory
     if (search) {
       query.andWhere(b => {
         b.where('formulas.name', 'like', `%${search}%`)
+         .orWhere('inventory_items.item_name', 'like', `%${search}%`)
          .orWhere('formulas.code', 'like', `%${search}%`)
          .orWhere('inventory_items.lot_number', 'like', `%${search}%`)
          .orWhere('production_batches.batch_number', 'like', `%${search}%`);
       });
     }
 
-    const items = await query.orderBy('inventory_items.updated_at', 'desc');
+    const rawItems = await query.orderBy('inventory_items.updated_at', 'desc');
+    const items = rawItems.map(i => ({
+      ...i,
+      product_name: i.product_name || i.item_name || 'Unnamed Product',
+    }));
     return res.json({ success: true, data: items });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch finished product inventory.', error: err.message });
@@ -255,8 +270,8 @@ router.get('/logbook', authenticateToken, requirePermission('inventory.view'), a
       .leftJoin('users', 'inventory_transactions.performed_by', 'users.id')
       .select(
         'inventory_transactions.*',
-        'materials.code as material_code',
-        'materials.name as material_name',
+        db.raw('COALESCE(materials.code, inventory_items.lot_number) as material_code'),
+        db.raw('COALESCE(inventory_items.item_name, materials.name) as material_name'),
         'materials.category as material_category',
         'companies.id as company_id',
         'companies.name as company_name',
@@ -591,9 +606,9 @@ router.get('/costing', authenticateToken, requirePermission('inventory.view'), a
         'inventory_items.lot_number',
         'inventory_items.current_stock',
         'inventory_items.uom',
-        'materials.code as material_code',
-        'materials.name as material_name',
-        'materials.cost as unit_cost',
+        db.raw('COALESCE(materials.code, inventory_items.lot_number) as material_code'),
+        db.raw('COALESCE(inventory_items.item_name, materials.name) as material_name'),
+        db.raw('COALESCE(inventory_items.cost, materials.cost, 0) as unit_cost'),
         'companies.id as company_id',
         'companies.name as company_name',
         'vendors.name as vendor_name'
@@ -605,6 +620,7 @@ router.get('/costing', authenticateToken, requirePermission('inventory.view'), a
     if (search) {
       rawQuery.andWhere(b => {
         b.where('materials.name', 'like', `%${search}%`)
+         .orWhere('inventory_items.item_name', 'like', `%${search}%`)
          .orWhere('materials.code', 'like', `%${search}%`)
          .orWhere('inventory_items.lot_number', 'like', `%${search}%`);
       });
@@ -634,9 +650,9 @@ router.get('/costing', authenticateToken, requirePermission('inventory.view'), a
         'inventory_items.lot_number',
         'inventory_items.current_stock',
         'inventory_items.uom',
-        'materials.code as material_code',
-        'materials.name as material_name',
-        'materials.cost as unit_cost',
+        db.raw('COALESCE(materials.code, inventory_items.lot_number) as material_code'),
+        db.raw('COALESCE(inventory_items.item_name, materials.name) as material_name'),
+        db.raw('COALESCE(inventory_items.cost, materials.cost, 0) as unit_cost'),
         'companies.id as company_id',
         'companies.name as company_name',
         'vendors.name as vendor_name'
@@ -648,6 +664,7 @@ router.get('/costing', authenticateToken, requirePermission('inventory.view'), a
     if (search) {
       packagingQuery.andWhere(b => {
         b.where('materials.name', 'like', `%${search}%`)
+         .orWhere('inventory_items.item_name', 'like', `%${search}%`)
          .orWhere('materials.code', 'like', `%${search}%`)
          .orWhere('inventory_items.lot_number', 'like', `%${search}%`);
       });
