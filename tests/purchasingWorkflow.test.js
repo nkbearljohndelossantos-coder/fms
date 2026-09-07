@@ -73,6 +73,20 @@ describe('Purchasing Rejection Tickets & Decision Engine Tests', () => {
       table.timestamps(true, true);
     });
 
+    await db.schema.createTable('purchase_requests', (table) => {
+      table.increments('id').primary();
+      table.string('request_number').notNullable().unique();
+      table.string('item_name').notNullable();
+      table.decimal('requested_quantity', 18, 6).notNullable();
+      table.string('uom').defaultTo('kg');
+      table.string('priority').defaultTo('Medium');
+      table.string('status').defaultTo('Pending Review');
+      table.integer('requested_by').notNullable();
+      table.integer('decided_by').nullable();
+      table.text('purchasing_remarks').nullable();
+      table.timestamps(true, true);
+    });
+
     // Seed test user
     await db('users').insert({
       id: 1,
@@ -153,5 +167,32 @@ describe('Purchasing Rejection Tickets & Decision Engine Tests', () => {
     expect(updatedTicket.status).toBe('QA_BYPASSED');
     expect(updatedRejection.disposition).toBe('Bypassed by Purchasing');
     expect(updatedItem.status).toBe('NORMAL');
+  });
+
+  it('should allow Inventory Dept to create Purchase Request and Purchasing Dept to update status', async () => {
+    const [reqId] = await db('purchase_requests').insert({
+      request_number: 'PR-2026-0001',
+      item_name: 'Hyaluronic Acid Powder',
+      requested_quantity: 25,
+      uom: 'kg',
+      priority: 'High',
+      status: 'Pending Review',
+      requested_by: 1,
+    });
+
+    const reqItem = await db('purchase_requests').where({ id: reqId }).first();
+    expect(reqItem.request_number).toBe('PR-2026-0001');
+    expect(reqItem.status).toBe('Pending Review');
+
+    // Purchasing Dept approves & places order
+    await db('purchase_requests').where({ id: reqId }).update({
+      status: 'Order Placed',
+      purchasing_remarks: 'PO-2026-991 issued to Vendor X',
+      decided_by: 1,
+    });
+
+    const updatedReq = await db('purchase_requests').where({ id: reqId }).first();
+    expect(updatedReq.status).toBe('Order Placed');
+    expect(updatedReq.purchasing_remarks).toContain('PO-2026-991');
   });
 });

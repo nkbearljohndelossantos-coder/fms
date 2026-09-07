@@ -27,6 +27,17 @@ export function PurchasingTicketsPage() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [search, setSearch] = useState('');
 
+  const [activePortalTab, setActivePortalTab] = useState('rejection-tickets'); // rejection-tickets, item-requests
+
+  // Purchase Requests State
+  const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [requestActionModalOpen, setRequestActionModalOpen] = useState(false);
+  const [targetRequestStatus, setTargetRequestStatus] = useState('Approved');
+  const [purchasingRemarks, setPurchasingRemarks] = useState('');
+  const [submittingRequestAction, setSubmittingRequestAction] = useState(false);
+
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -59,9 +70,67 @@ export function PurchasingTicketsPage() {
     }
   };
 
+  const fetchPurchaseRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await apiFetch('/api/v1/inventory/purchase-requests');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPurchaseRequests(data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch purchase requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
+    fetchPurchaseRequests();
   }, [statusFilter]);
+
+  useEffect(() => {
+    if (activePortalTab === 'item-requests') {
+      fetchPurchaseRequests();
+    }
+  }, [activePortalTab]);
+
+  const handleOpenRequestActionModal = (reqItem) => {
+    setSelectedRequest(reqItem);
+    setTargetRequestStatus(reqItem.status === 'Pending Review' ? 'Approved' : reqItem.status);
+    setPurchasingRemarks(reqItem.purchasing_remarks || '');
+    setRequestActionModalOpen(true);
+  };
+
+  const handleUpdateRequestStatus = async (e) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+
+    setSubmittingRequestAction(true);
+    try {
+      const res = await apiFetch(`/api/v1/inventory/purchase-requests/${selectedRequest.id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: targetRequestStatus,
+          purchasing_remarks: purchasingRemarks,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRequestActionModalOpen(false);
+        setSelectedRequest(null);
+        fetchPurchaseRequests();
+        alert(`✅ ${data.message}`);
+      } else {
+        alert(data.message || 'Failed to update request status.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update request status.');
+    } finally {
+      setSubmittingRequestAction(false);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -180,7 +249,36 @@ export function PurchasingTicketsPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* Portal Navigation Tabs */}
+      <div className="flex border-b border-slate-200 gap-6 text-sm font-bold bg-white px-5 pt-3 rounded-2xl border">
+        <button
+          onClick={() => setActivePortalTab('rejection-tickets')}
+          className={`pb-3 transition flex items-center gap-2 border-b-2 ${
+            activePortalTab === 'rejection-tickets'
+              ? 'border-indigo-600 text-indigo-600 font-black'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 text-indigo-600" />
+          <span>QA Rejection Tickets ({tickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActivePortalTab('item-requests')}
+          className={`pb-3 transition flex items-center gap-2 border-b-2 ${
+            activePortalTab === 'item-requests'
+              ? 'border-indigo-600 text-indigo-600 font-black'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <FileText className="w-4 h-4 text-emerald-600" />
+          <span>Item Purchase Requisitions ({purchaseRequests.length})</span>
+        </button>
+      </div>
+
+      {activePortalTab === 'rejection-tickets' && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Pending Review */}
         <div
@@ -560,6 +658,132 @@ export function PurchasingTicketsPage() {
           </div>
         </div>
       )}
+        </div>
+      )}
+
+      {/* ITEM PURCHASE REQUESTS VIEW */}
+      {activePortalTab === 'item-requests' && (
+        <div className="space-y-6">
+          {/* KPI Cards for Purchase Requests */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Requisitions</span>
+              <h2 className="text-2xl font-black text-slate-900 mt-1">{purchaseRequests.length}</h2>
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Pending Review</span>
+              <h2 className="text-2xl font-black text-amber-900 mt-1">
+                {purchaseRequests.filter(r => r.status === 'Pending Review').length}
+              </h2>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Approved / Order Placed</span>
+              <h2 className="text-2xl font-black text-blue-900 mt-1">
+                {purchaseRequests.filter(r => ['Approved', 'Order Placed'].includes(r.status)).length}
+              </h2>
+            </div>
+
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Fulfilled</span>
+              <h2 className="text-2xl font-black text-emerald-900 mt-1">
+                {purchaseRequests.filter(r => r.status === 'Fulfilled').length}
+              </h2>
+            </div>
+          </div>
+
+          {/* Table of Requisitions */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-indigo-600" />
+                Incoming Item Purchase Requests from Inventory Department
+              </h3>
+              <button
+                onClick={fetchPurchaseRequests}
+                className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-200/50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingRequests ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4">Request #</th>
+                    <th className="py-3 px-4">Item Name</th>
+                    <th className="py-3 px-4 text-right">Qty Requested</th>
+                    <th className="py-3 px-4">Priority</th>
+                    <th className="py-3 px-4">Date Needed</th>
+                    <th className="py-3 px-4">Requested By</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {purchaseRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="text-center py-8 text-slate-400">
+                        No item purchase requests submitted yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    purchaseRequests.map(req => (
+                      <tr key={req.id} className="hover:bg-slate-50/80 transition">
+                        <td className="py-3 px-4 font-mono font-bold text-indigo-600">{req.request_number}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {req.item_name}
+                          {req.justification && (
+                            <p className="text-[11px] text-slate-400 font-normal italic truncate max-w-xs">{req.justification}</p>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                          {Number(req.requested_quantity).toFixed(2)} {req.uom}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            req.priority === 'Critical' ? 'bg-rose-100 text-rose-800' :
+                            req.priority === 'High' ? 'bg-amber-100 text-amber-800' :
+                            req.priority === 'Medium' ? 'bg-blue-100 text-blue-800' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            {req.priority}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-600">{req.needed_by_date || 'N/A'}</td>
+                        <td className="py-3 px-4 text-slate-700">
+                          {req.requested_by_first_name} {req.requested_by_last_name}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            req.status === 'Fulfilled' ? 'bg-emerald-100 text-emerald-800' :
+                            req.status === 'Order Placed' ? 'bg-blue-100 text-blue-800' :
+                            req.status === 'Approved' ? 'bg-indigo-100 text-indigo-800' :
+                            req.status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => handleOpenRequestActionModal(req)}
+                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-xs transition border border-indigo-200"
+                          >
+                            Update Status
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Decision Executive Form Modal */}
       {decisionModalOpen && selectedTicket && (
@@ -695,6 +919,71 @@ export function PurchasingTicketsPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* MODAL: UPDATE PURCHASE REQUEST STATUS BY PURCHASING DEPT */}
+      {requestActionModalOpen && selectedRequest && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-base text-slate-900">Update Requisition Status ({selectedRequest.request_number})</h3>
+              <button onClick={() => setRequestActionModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-2xl text-xs space-y-1">
+              <p className="font-bold text-slate-900">{selectedRequest.item_name}</p>
+              <p className="text-slate-600">Requested Qty: <span className="font-bold font-mono text-emerald-700">{selectedRequest.requested_quantity} {selectedRequest.uom}</span></p>
+              <p className="text-slate-500 text-[11px]">Justification: {selectedRequest.justification || 'N/A'}</p>
+            </div>
+
+            <form onSubmit={handleUpdateRequestStatus} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Target Status</label>
+                <select
+                  value={targetRequestStatus}
+                  onChange={e => setTargetRequestStatus(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                >
+                  <option value="Approved">Approved (Approved for Procurement)</option>
+                  <option value="Order Placed">Order Placed (PO Issued to Vendor)</option>
+                  <option value="Fulfilled">Fulfilled (Received & Added to Inventory)</option>
+                  <option value="Rejected">Rejected (Declined / Duplicate Request)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Purchasing Remarks / PO Tracking Notes</label>
+                <textarea
+                  rows="3"
+                  placeholder="e.g. PO #9921 issued to Chemical Vendor Inc, estimated delivery on Sep 12..."
+                  value={purchasingRemarks}
+                  onChange={e => setPurchasingRemarks(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRequestActionModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRequestAction}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5"
+                >
+                  {submittingRequestAction ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Save Status Update
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

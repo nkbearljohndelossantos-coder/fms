@@ -84,6 +84,18 @@ export function InventoryPage() {
   const [traceabilityData, setTraceabilityData] = useState(null);
   const [loadingTraceability, setLoadingTraceability] = useState(false);
 
+  const [isPurchaseRequestModalOpen, setIsPurchaseRequestModalOpen] = useState(false);
+  const [purchaseRequestForm, setPurchaseRequestForm] = useState({
+    itemName: '',
+    materialId: '',
+    requestedQuantity: '',
+    uom: 'kg',
+    priority: 'Medium',
+    neededByDate: '',
+    vendorId: '',
+    justification: '',
+  });
+
   const [lightboxImage, setLightboxImage] = useState(null);
 
   // Form Inputs State
@@ -368,6 +380,49 @@ export function InventoryPage() {
       .catch(() => setLoadingTraceability(false));
   };
 
+  const handlePurchaseRequestSubmit = async (e) => {
+    e.preventDefault();
+    if (!purchaseRequestForm.itemName || !purchaseRequestForm.requestedQuantity) {
+      alert('Please enter Item Name and Requested Quantity.');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/v1/inventory/purchase-requests', {
+        method: 'POST',
+        body: JSON.stringify({
+          item_name: purchaseRequestForm.itemName,
+          material_id: purchaseRequestForm.materialId,
+          requested_quantity: purchaseRequestForm.requestedQuantity,
+          uom: purchaseRequestForm.uom,
+          priority: purchaseRequestForm.priority,
+          needed_by_date: purchaseRequestForm.neededByDate,
+          vendor_id: purchaseRequestForm.vendorId,
+          justification: purchaseRequestForm.justification,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPurchaseRequestModalOpen(false);
+        setPurchaseRequestForm({
+          itemName: '',
+          materialId: '',
+          requestedQuantity: '',
+          uom: 'kg',
+          priority: 'Medium',
+          neededByDate: '',
+          vendorId: '',
+          justification: '',
+        });
+        alert(`✅ ${data.message}`);
+      } else {
+        alert(`❌ Error: ${data.message}`);
+      }
+    } catch (err) {
+      alert(`❌ Failed: ${err.message}`);
+    }
+  };
+
   // Helper Badge Color for Stock Status
   const getStatusBadge = (status) => {
     switch (status) {
@@ -414,6 +469,14 @@ export function InventoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsPurchaseRequestModalOpen(true)}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2"
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Request Item to Purchasing</span>
+          </button>
+
           <button
             onClick={() => {
               setStockInForm(prev => ({ ...prev, itemType: activeTab === 'packaging' ? 'PACKAGING' : 'RAW_MATERIAL' }));
@@ -1664,6 +1727,155 @@ export function InventoryPage() {
                 )}
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 7: CREATE PURCHASE REQUEST TO PURCHASING DEPT */}
+      {/* ========================================================================= */}
+      {isPurchaseRequestModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-slate-900">Create Item Purchase Request</h3>
+              </div>
+              <button onClick={() => setIsPurchaseRequestModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePurchaseRequestSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select Material or Type Item Name <span className="text-rose-500">*</span></label>
+                <input
+                  type="text"
+                  list="materials-datalist"
+                  placeholder="e.g. Glycerin USP 99.7% or Glass Bottle 50ml..."
+                  value={purchaseRequestForm.itemName}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const foundMat = materialsList.find(m => m.name.toLowerCase() === val.toLowerCase());
+                    setPurchaseRequestForm(prev => ({
+                      ...prev,
+                      itemName: val,
+                      materialId: foundMat ? foundMat.id : '',
+                      uom: foundMat ? (foundMat.default_uom || 'kg') : prev.uom,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+                  required
+                />
+                <datalist id="materials-datalist">
+                  {materialsList.map(m => (
+                    <option key={m.id} value={m.name}>{m.code} - {m.category || 'Material'}</option>
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Requested Quantity <span className="text-rose-500">*</span></label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.001"
+                    placeholder="e.g. 50"
+                    value={purchaseRequestForm.requestedQuantity}
+                    onChange={e => setPurchaseRequestForm(prev => ({ ...prev, requestedQuantity: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono text-slate-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit of Measure (UOM)</label>
+                  <select
+                    value={purchaseRequestForm.uom}
+                    onChange={e => setPurchaseRequestForm(prev => ({ ...prev, uom: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                  >
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="L">L</option>
+                    <option value="mL">mL</option>
+                    <option value="pcs">pcs</option>
+                    <option value="packs">packs</option>
+                    <option value="boxes">boxes</option>
+                    <option value="bottles">bottles</option>
+                    <option value="jars">jars</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Urgency / Priority</label>
+                  <select
+                    value={purchaseRequestForm.priority}
+                    onChange={e => setPurchaseRequestForm(prev => ({ ...prev, priority: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                  >
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                    <option value="Critical">Critical / Production Halt</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Needed By Date</label>
+                  <input
+                    type="date"
+                    value={purchaseRequestForm.neededByDate}
+                    onChange={e => setPurchaseRequestForm(prev => ({ ...prev, neededByDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Preferred Supplier / Vendor (Optional)</label>
+                <select
+                  value={purchaseRequestForm.vendorId}
+                  onChange={e => setPurchaseRequestForm(prev => ({ ...prev, vendorId: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                >
+                  <option value="">No Preferred Vendor (Purchasing Chooses)</option>
+                  {vendorsList.map(v => (
+                    <option key={v.id} value={v.id}>{v.name} ({v.code})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Justification / Reason for Requisition</label>
+                <textarea
+                  rows="3"
+                  placeholder="e.g. Stock level below safety buffer for upcoming batch compounding..."
+                  value={purchaseRequestForm.justification}
+                  onChange={e => setPurchaseRequestForm(prev => ({ ...prev, justification: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsPurchaseRequestModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>Submit Requisition</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

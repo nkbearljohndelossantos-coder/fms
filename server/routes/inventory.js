@@ -1025,4 +1025,139 @@ router.post('/purchasing-tickets/:id/decision', authenticateToken, async (req, r
   }
 });
 
+// POST /api/v1/inventory/purchase-requests - Submit Item Purchase Request from Inventory
+router.post('/purchase-requests', authenticateToken, async (req, res) => {
+  try {
+    const { item_name, material_id, requested_quantity, uom, priority, needed_by_date, justification, vendor_id } = req.body;
+
+    if (!item_name || !requested_quantity) {
+      return res.status(400).json({ success: false, message: 'Item name and requested quantity are required.' });
+    }
+
+    const countRes = await db('purchase_requests').count('id as count').first();
+    const count = Number(countRes?.count || 0) + 1;
+    const request_number = `PR-${new Date().getFullYear()}-${String(count).padStart(4, '0')}`;
+
+    const insertResult = await db('purchase_requests').insert({
+      request_number,
+      item_name: String(item_name).trim(),
+      material_id: material_id ? Number(material_id) : null,
+      requested_quantity: Number(requested_quantity),
+      uom: uom || 'kg',
+      priority: priority || 'Medium',
+      needed_by_date: needed_by_date || null,
+      justification: justification ? String(justification).trim() : null,
+      vendor_id: vendor_id ? Number(vendor_id) : null,
+      status: 'Pending Review',
+      requested_by: req.user.id,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    const id = Array.isArray(insertResult) ? (typeof insertResult[0] === 'object' ? insertResult[0].id : insertResult[0]) : insertResult;
+
+    await AuditService.logEvent({
+      userId: req.user.id,
+      userRole: req.user.roles?.[0] || 'User',
+      action: 'PURCHASE_REQUEST_CREATED',
+      entityType: 'PurchaseRequest',
+      entityId: String(id),
+      newValues: { request_number, item_name, requested_quantity, uom, priority },
+    });
+
+    return res.json({
+      success: true,
+      message: `Purchase request ${request_number} submitted successfully to Purchasing Department.`,
+      data: { id, request_number },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/v1/inventory/purchase-requests - List Purchase Requests
+router.get('/purchase-requests', authenticateToken, async (req, res) => {
+  try {
+    const { status, search, priority } = req.query;
+
+    const query = db('purchase_requests')
+      .leftJoin('vendors', 'purchase_requests.vendor_id', 'vendors.id')
+      .leftJoin('users as rb', 'purchase_requests.requested_by', 'rb.id')
+      .leftJoin('users as db_user', 'purchase_requests.decided_by', 'db_user.id')
+      .select(
+        'purchase_requests.*',
+        'vendors.name as vendor_name',
+        'vendors.code as vendor_code',
+        'rb.first_name as requested_by_first_name',
+        'rb.last_name as requested_by_last_name',
+        'rb.email as requested_by_email',
+        'db_user.first_name as decided_by_first_name',
+        'db_user.last_name as decided_by_last_name'
+      );
+
+    if (status && status !== 'All') {
+      query.andWhere('purchase_requests.status', status);
+    }
+
+    if (priority && priority !== 'All') {
+      query.andWhere('purchase_requests.priority', priority);
+    }
+
+    if (search) {
+      query.andWhere(b => {
+        b.where('purchase_requests.request_number', 'like', `%${search}%`)
+         .orWhere('purchase_requests.item_name', 'like', `%${search}%`)
+         .orWhere('vendors.name', 'like', `%${search}%`);
+      });
+    }
+
+    const requests = await query.orderBy('purchase_requests.id', 'desc');
+
+    return res.json({ success: true, data: requests });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch purchase requests.', error: err.message });
+  }
+});
+
+// PUT /api/v1/inventory/purchase-requests/:id/status - Update Purchase Request Status (Purchasing Action)
+router.put('/purchase-requests/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, purchasing_remarks } = req.body;
+
+    const request = await db('purchase_requests').where({ id }).first();
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Purchase request not found.' });
+    }
+
+    const validStatuses = ['Approved', 'Order Placed', 'Fulfilled', 'Rejected'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: `Invalid status. Allowed values: ${validStatuses.join(', ')}` });
+    }
+
+    await db('purchase_requests').where({ id }).update({
+      status,
+      purchasing_remarks: purchasing_remarks ? String(purchasing_remarks).trim() : null,
+      decided_by: req.user.id,
+      updated_at: new Date(),
+    });
+
+    await AuditService.logEvent({
+      userId: req.user.id,
+      userRole: req.user.roles?.[0] || 'User',
+      action: `PURCHASE_REQUEST_STATUS_${status.toUpperCase().replace(/\s+/g, '_')}`,
+      entityType: 'PurchaseRequest',
+      entityId: String(id),
+      newValues: { request_number: request.request_number, status, purchasing_remarks },
+    });
+
+    return res.json({
+      success: true,
+      message: `Purchase request ${request.request_number} status updated to '${status}'.`,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;
