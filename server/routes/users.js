@@ -36,6 +36,13 @@ router.get('/roles', authenticateToken, async (req, res) => {
         description: 'Client sample request intake and specification creator',
       }).catch(() => {});
     }
+    const purchasingExists = await db('roles').where({ name: 'Purchasing Department' }).first();
+    if (!purchasingExists) {
+      await db('roles').insert({
+        name: 'Purchasing Department',
+        description: 'Receiving Rejection Ticket Decision Engine & Vendor Return Management',
+      }).catch(() => {});
+    }
     const roles = await db('roles').select('*');
     return res.json({ success: true, data: roles });
   } catch (err) {
