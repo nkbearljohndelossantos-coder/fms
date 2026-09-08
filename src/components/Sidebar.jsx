@@ -88,7 +88,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <FileText className="w-4 h-4 text-blue-400" />
+                <FileText className="w-4 h-4 text-slate-400" />
                 <span>Sample Requests</span>
               </button>
 
@@ -100,7 +100,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <PlusCircle className="w-4 h-4 text-emerald-400" />
+                <PlusCircle className="w-4 h-4 text-slate-400" />
                 <span>New Sample Request</span>
               </button>
 
@@ -112,7 +112,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <KeyRound className="w-4 h-4 text-amber-400" />
+                <KeyRound className="w-4 h-4 text-slate-400" />
                 <span>Change Password</span>
               </button>
             </>
@@ -127,7 +127,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Boxes className="w-4 h-4 text-blue-400" />
+                <Boxes className="w-4 h-4 text-slate-400" />
                 <span>Inventory Management</span>
               </button>
 
@@ -139,7 +139,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <ListFilter className="w-4 h-4 text-emerald-400" />
+                <ListFilter className="w-4 h-4 text-slate-400" />
                 <span>Material Master List</span>
               </button>
 
@@ -151,7 +151,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <BookOpen className="w-4 h-4 text-indigo-400" />
+                <BookOpen className="w-4 h-4 text-slate-400" />
                 <span>Material Logbook</span>
               </button>
 
@@ -163,7 +163,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <DollarSign className="w-4 h-4 text-emerald-400" />
+                <DollarSign className="w-4 h-4 text-slate-400" />
                 <span>Inventory Costing</span>
               </button>
 
@@ -175,7 +175,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <PlusCircle className="w-4 h-4 text-purple-400" />
+                <PlusCircle className="w-4 h-4 text-slate-400" />
                 <span>Create Material</span>
               </button>
 
@@ -187,7 +187,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <KeyRound className="w-4 h-4 text-amber-400" />
+                <KeyRound className="w-4 h-4 text-slate-400" />
                 <span>Change Password</span>
               </button>
             </>
@@ -202,7 +202,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Building2 className="w-4 h-4 text-indigo-400" />
+                <Building2 className="w-4 h-4 text-slate-400" />
                 <span>Purchasing Tickets</span>
               </button>
 
@@ -214,7 +214,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Boxes className="w-4 h-4 text-blue-400" />
+                <Boxes className="w-4 h-4 text-slate-400" />
                 <span>Inventory Management</span>
               </button>
 
@@ -226,7 +226,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <ListFilter className="w-4 h-4 text-emerald-400" />
+                <ListFilter className="w-4 h-4 text-slate-400" />
                 <span>Material Master List</span>
               </button>
 
@@ -238,7 +238,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <DollarSign className="w-4 h-4 text-emerald-400" />
+                <DollarSign className="w-4 h-4 text-slate-400" />
                 <span>Inventory Costing</span>
               </button>
 
@@ -250,7 +250,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <KeyRound className="w-4 h-4 text-amber-400" />
+                <KeyRound className="w-4 h-4 text-slate-400" />
                 <span>Change Password</span>
               </button>
             </>
@@ -365,7 +365,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                     >
-                      <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                      <BookOpen className="w-3.5 h-3.5 text-slate-400" />
                       <span>Material Logbook</span>
                     </button>
                     <button
@@ -376,7 +376,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                     >
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                      <DollarSign className="w-3.5 h-3.5 text-slate-400" />
                       <span>Inventory Costing</span>
                     </button>
                     <button
@@ -451,7 +451,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                     >
-                      <FlaskConical className="w-3.5 h-3.5 text-indigo-400" />
+                      <FlaskConical className="w-3.5 h-3.5 text-slate-400" />
                       <span>Perfume – No Brand</span>
                     </button>
                     <button
@@ -462,7 +462,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                           : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                     >
-                      <FlaskConical className="w-3.5 h-3.5 text-purple-400" />
+                      <FlaskConical className="w-3.5 h-3.5 text-slate-400" />
                       <span>Perfume – Brand</span>
                     </button>
                     <button
@@ -563,7 +563,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <FileText className="w-4 h-4 text-blue-400" />
+                  <FileText className="w-4 h-4 text-slate-400" />
                   <span>Sample Requests</span>
                 </button>
                 <button
@@ -574,7 +574,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <PlusCircle className="w-4 h-4 text-blue-400" />
+                  <PlusCircle className="w-4 h-4 text-slate-400" />
                   <span>New Sample Request</span>
                 </button>
               </div>
@@ -601,7 +601,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Building2 className="w-4 h-4 text-indigo-400" />
+                <Building2 className="w-4 h-4 text-slate-400" />
                 <span>Purchasing Tickets</span>
               </button>
 
@@ -653,7 +653,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <KeyRound className="w-4 h-4 text-amber-400" />
+                <KeyRound className="w-4 h-4 text-slate-400" />
                 <span>Change Password</span>
               </button>
             </>
@@ -692,7 +692,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 isCurrent('sample-request-form') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <PlusCircle className="w-5 h-5 text-emerald-400" />
+              <PlusCircle className="w-5 h-5 text-slate-400" />
               <span className="text-[9px] mt-1 truncate">New</span>
             </button>
             <button
@@ -701,12 +701,12 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 isCurrent('change-password') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <KeyRound className="w-5 h-5 text-amber-400" />
+              <KeyRound className="w-5 h-5 text-slate-400" />
               <span className="text-[9px] mt-1 truncate">Pass</span>
             </button>
             <button
               onClick={logout}
-              className="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-rose-400 hover:text-rose-300"
+              className="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-slate-400 hover:text-slate-200"
             >
               <LogOut className="w-5 h-5" />
               <span className="text-[9px] mt-1 truncate">Logout</span>
@@ -729,7 +729,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 isCurrent('materials-list') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <ListFilter className="w-5 h-5 text-emerald-400" />
+              <ListFilter className="w-5 h-5 text-slate-400" />
               <span className="text-[9px] mt-1 truncate">Materials</span>
             </button>
             <button
@@ -738,7 +738,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 isCurrent('create-material') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <PlusCircle className="w-5 h-5 text-purple-400" />
+              <PlusCircle className="w-5 h-5 text-slate-400" />
               <span className="text-[9px] mt-1 truncate">New Mat</span>
             </button>
             <button
@@ -747,12 +747,12 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                 isCurrent('change-password') ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <KeyRound className="w-5 h-5 text-amber-400" />
+              <KeyRound className="w-5 h-5 text-slate-400" />
               <span className="text-[9px] mt-1 truncate">Pass</span>
             </button>
             <button
               onClick={logout}
-              className="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-rose-400 hover:text-rose-300"
+              className="flex flex-col items-center justify-center w-16 h-12 rounded-xl text-slate-400 hover:text-slate-200"
             >
               <LogOut className="w-5 h-5" />
               <span className="text-[9px] mt-1 truncate">Logout</span>
@@ -829,7 +829,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-blue-400 border border-slate-700">
+                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 border border-slate-700">
                   {user?.firstName ? user.firstName[0] : 'U'}
                 </div>
                 <div>
@@ -853,7 +853,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('inventory')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <Boxes className="w-6 h-6 text-blue-400 mb-2" />
+                    <Boxes className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Inventory</span>
                   </button>
 
@@ -861,7 +861,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('materials-list')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <ListFilter className="w-6 h-6 text-emerald-400 mb-2" />
+                    <ListFilter className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Material List</span>
                   </button>
 
@@ -869,7 +869,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('material-logbook')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <BookOpen className="w-6 h-6 text-indigo-400 mb-2" />
+                    <BookOpen className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Material Logbook</span>
                   </button>
 
@@ -877,7 +877,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('inventory-costing')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <DollarSign className="w-6 h-6 text-emerald-400 mb-2" />
+                    <DollarSign className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Costing</span>
                   </button>
 
@@ -885,7 +885,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('create-material')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <PlusCircle className="w-6 h-6 text-purple-400 mb-2" />
+                    <PlusCircle className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">New Material</span>
                   </button>
 
@@ -893,7 +893,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('change-password')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <KeyRound className="w-6 h-6 text-amber-400 mb-2" />
+                    <KeyRound className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Password</span>
                   </button>
                 </>
@@ -903,7 +903,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('create-formula')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <PlusCircle className="w-6 h-6 text-blue-400 mb-2" />
+                    <PlusCircle className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">New Formula</span>
                   </button>
 
@@ -911,7 +911,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('formula-versions')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <History className="w-6 h-6 text-indigo-400 mb-2" />
+                    <History className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Versions Log</span>
                   </button>
 
@@ -919,7 +919,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('formula-comparison')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <GitCompare className="w-6 h-6 text-amber-400 mb-2" />
+                    <GitCompare className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Comparison</span>
                   </button>
 
@@ -927,7 +927,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('create-material')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <PlusCircle className="w-6 h-6 text-emerald-400 mb-2" />
+                    <PlusCircle className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">New Material</span>
                   </button>
 
@@ -935,7 +935,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('qc-inspection')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <ShieldCheck className="w-6 h-6 text-emerald-500 mb-2" />
+                    <ShieldCheck className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">QC Hub</span>
                   </button>
 
@@ -943,7 +943,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('reports')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <FileSpreadsheet className="w-6 h-6 text-blue-500 mb-2" />
+                    <FileSpreadsheet className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Reports</span>
                   </button>
 
@@ -951,7 +951,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                     onClick={() => handleMobileNav('users-roles')}
                     className="flex flex-col items-center justify-center p-4 bg-slate-850 hover:bg-slate-800 rounded-2xl text-slate-300 hover:text-white border border-slate-800 transition"
                   >
-                    <Users className="w-6 h-6 text-purple-400 mb-2" />
+                    <Users className="w-6 h-6 text-slate-400 mb-2" />
                     <span className="text-xs font-semibold">Users & Roles</span>
                   </button>
 

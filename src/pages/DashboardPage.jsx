@@ -93,7 +93,7 @@ export function DashboardPage({ setCurrentPage }) {
             <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.total}</p>
             <p className="text-xs text-slate-500 mt-1">Active in Master Database</p>
           </div>
-          <div className="p-4 bg-blue-50 text-blue-700 rounded-2xl">
+          <div className="p-4 bg-slate-100 text-slate-700 rounded-2xl">
             <FlaskConical className="w-6 h-6" />
           </div>
         </div>
@@ -105,7 +105,7 @@ export function DashboardPage({ setCurrentPage }) {
             <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.categoryCount}</p>
             <p className="text-xs text-slate-500 mt-1">{isPerfumeUser ? 'Eau de Parfum & Brand Conversions' : 'Phase-Based Skincare & Personal Care'}</p>
           </div>
-          <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl">
+          <div className="p-4 bg-slate-100 text-slate-700 rounded-2xl">
             <Layers className="w-6 h-6" />
           </div>
         </div>

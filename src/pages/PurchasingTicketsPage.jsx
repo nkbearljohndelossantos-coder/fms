@@ -255,11 +255,11 @@ export function PurchasingTicketsPage() {
           onClick={() => setActivePortalTab('rejection-tickets')}
           className={`pb-3 transition flex items-center gap-2 border-b-2 ${
             activePortalTab === 'rejection-tickets'
-              ? 'border-indigo-600 text-indigo-600 font-black'
+              ? 'border-slate-800 text-slate-900 font-black'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <AlertTriangle className="w-4 h-4 text-indigo-600" />
+          <AlertTriangle className="w-4 h-4 text-slate-500" />
           <span>QA Rejection Tickets ({tickets.length})</span>
         </button>
 
@@ -267,11 +267,11 @@ export function PurchasingTicketsPage() {
           onClick={() => setActivePortalTab('item-requests')}
           className={`pb-3 transition flex items-center gap-2 border-b-2 ${
             activePortalTab === 'item-requests'
-              ? 'border-indigo-600 text-indigo-600 font-black'
+              ? 'border-slate-800 text-slate-900 font-black'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <FileText className="w-4 h-4 text-emerald-600" />
+          <FileText className="w-4 h-4 text-slate-500" />
           <span>Item Purchase Requisitions ({purchaseRequests.length})</span>
         </button>
       </div>
@@ -697,7 +697,7 @@ export function PurchasingTicketsPage() {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-4 h-4 text-slate-500" />
                 Incoming Item Purchase Requests from Inventory Department
               </h3>
               <button

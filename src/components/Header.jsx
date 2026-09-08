@@ -91,7 +91,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
               {/* Header */}
               <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-400" />
+                  <Bell className="w-4 h-4 text-slate-400" />
                   <h3 className="text-xs font-bold uppercase tracking-wider">Sample Request Alerts</h3>
                 </div>
                 {pendingCount > 0 ? (
@@ -100,7 +100,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[10px] font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> All Clear
+                    <CheckCircle2 className="w-3 h-3 text-slate-300" /> All Clear
                   </span>
                 )}
               </div>
@@ -109,7 +109,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                 {recentPending.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500 space-y-2">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <CheckCircle2 className="w-8 h-8 text-slate-400 mx-auto" />
                     <p className="font-semibold text-slate-800">No Pending Sample Requests</p>
                     <p className="text-[11px] text-slate-400">All submitted sample requests have been reviewed.</p>
                   </div>
@@ -120,7 +120,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
                       onClick={handleOpenRequestList}
                       className="p-3.5 hover:bg-blue-50/70 transition cursor-pointer flex items-start gap-3 group"
                     >
-                      <div className="p-2 bg-blue-100 text-blue-700 rounded-xl shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
+                      <div className="p-2 bg-slate-100 text-slate-700 rounded-xl shrink-0 group-hover:bg-slate-800 group-hover:text-white transition">
                         <FileText className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -140,7 +140,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
                           Product: {item.product_name || 'Unspecified'} • By: {item.requested_by_name || 'MSM'}
                         </p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 self-center shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 self-center shrink-0" />
                     </div>
                   ))
                 )}
@@ -153,7 +153,7 @@ export function Header({ title, subtitle, setCurrentPage }) {
                   onClick={handleOpenRequestList}
                   className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
                 >
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
                   View All Sample Requests
                 </button>
               </div>

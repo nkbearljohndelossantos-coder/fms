@@ -1739,7 +1739,7 @@ export function InventoryPage() {
           <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-lg p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-emerald-600" />
+                <Building2 className="w-5 h-5 text-slate-500" />
                 <h3 className="font-bold text-base text-slate-900">Create Item Purchase Request</h3>
               </div>
               <button onClick={() => setIsPurchaseRequestModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">

@@ -296,7 +296,7 @@ export function QualityControlPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-purple-600" />
+            <ShieldCheck className="w-6 h-6 text-slate-500" />
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Quality Control Hub</h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
